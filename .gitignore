@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.secrets/
+data/
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+
+.env.*
+# Generated for this machine by scripts/dbt_key.py
+snowflake/07_dbt_key_access.sql

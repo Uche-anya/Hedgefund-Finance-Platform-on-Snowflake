@@ -1,0 +1,4 @@
+business_date,allocation_id,execution_id,portfolio,quantity
+2026-09-14,A001,E001,GROWTH,100
+2026-09-14,A002,E002,GROWTH,30
+2026-09-14,A003,E003,HEDGE,20

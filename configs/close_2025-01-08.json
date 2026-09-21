@@ -1,0 +1,10 @@
+{
+  "business_date": "2025-01-06",
+  "as_of": "2025-01-08",
+  "delivery": "../data/landing/2025-01-06/18ae80085f1043789b5d604ee44dc216",
+  "references": "../data/landing/2025-01-08/213ac7b4b9a84e009ae529b887ce0a0c",
+  "fx_delivery": "../data/fx/f5a7a63c62c44150b12ebbfdc7a09203",
+  "gbp_references": "../data/landing/2025-01-08/7b49b33130d44197b9a57f1c4e7d2d0e",
+  "database": "../data/gbp_pipeline.sqlite",
+  "run_root": "../data/runs"
+}

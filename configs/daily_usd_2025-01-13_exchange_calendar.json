@@ -1,0 +1,12 @@
+{
+  "previous_date": "2025-01-10",
+  "business_date": "2025-01-13",
+  "opening_database": "../data/daily_usd_pipeline.sqlite",
+  "database": "../data/daily_usd_pipeline.sqlite",
+  "delivery": "../data/landing/2025-01-13/2839c6e763724d7bbf7cdabc6cff5528",
+  "prices": "../data/landing/2025-01-13/6b74b98ca4704b02bc78dd47960c8c08",
+  "references": "../data/landing/2025-01-13/25293a99d6e546a399d720397c2ead97",
+  "run_root": "../data/daily_runs",
+  "calendar": "../calendars/us_equities_2025_01_v1.json",
+  "calendar_sha256": "db08b35ab122d9d38a9a2cd7928f5ae9be6892a68d9c33147f1121e0c7479581"
+}

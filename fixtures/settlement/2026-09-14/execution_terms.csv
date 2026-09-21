@@ -1,0 +1,4 @@
+business_date,execution_id,currency,execution_price,settlement_due
+2026-09-14,E001,GBP,10.00,2026-09-15
+2026-09-14,E002,GBP,11.00,2026-09-16
+2026-09-14,E003,GBP,20.00,2026-09-16

@@ -1,0 +1,3 @@
+business_date,execution_id,currency,execution_price,settlement_due
+2025-01-09,SIM-D2-E001,USD,240.00,2025-01-10
+2025-01-09,SIM-D2-E002,USD,220.00,2025-01-10

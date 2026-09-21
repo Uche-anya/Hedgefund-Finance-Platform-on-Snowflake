@@ -1,0 +1,3 @@
+business_date,execution_id,instrument,side,quantity
+2025-01-09,SIM-D2-E001,AAPL.US,BUY,3
+2025-01-09,SIM-D2-E002,AMZN.US,BUY,2
