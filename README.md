@@ -1,8 +1,23 @@
 # Northbridge: learning to build a daily fund pipeline
 
-Status: **PRE_TRIAL, local processing only.** Committed fixtures are fictional.
-Part 8 downloads real historical prices into ignored local storage and combines
-them with explicitly simulated trades in a separate USD learning scenario.
+## Current status
+
+The Snowflake development build now loads simulated trades and saved real
+closing prices, derives portfolio holdings, and values those holdings in USD.
+The latest user-run dbt build passed: 5 models, 40 data tests, and 1 startup hook.
+The local Python prototype also passes 150 tests.
+
+- [Snowflake setup and ingestion](snowflake/README.md)
+- [dbt setup](dbt/README.md) and [key authentication](dbt/KEY_AUTH.md)
+- [Position valuation](dbt/VALUATION.md)
+
+This is a learning project, not a deployed daily service. Snowflake currently
+covers first-day holdings and position values; cash, settlement and NAV logic
+below describe the earlier Python prototype. Airflow and ML are not implemented.
+Fixtures are fictional. Downloaded market data and private keys stay outside Git.
+The numbered lessons and pre-trial checklist preserve the earlier learning work.
+
+## Earlier Python prototype
 
 We are building this in small lessons. We now have a calculation we can check
 by hand, saved input deliveries that can be replayed, and positions derived
