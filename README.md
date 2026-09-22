@@ -5,11 +5,20 @@
 The Snowflake development build now loads simulated trades and saved real
 closing prices, derives portfolio holdings, and values those holdings in USD.
 The latest user-run dbt build passed: 5 models, 40 data tests, and 1 startup hook.
-The local Python prototype also passes 150 tests.
+The local Python tools pass 169 tests.
+
+The local simulator produces five validated fictional trade events. A separate
+Massive download contains 247,958 daily records across 503 tickers. BNY and Block
+have separate 500-row repairs for historical ticker changes; those repairs and
+the larger price dataset are not yet integrated into Snowflake.
 
 - [Snowflake setup and ingestion](snowflake/README.md)
 - [dbt setup](dbt/README.md) and [key authentication](dbt/KEY_AUTH.md)
 - [Position valuation](dbt/VALUATION.md)
+- [Simulator: produce five fictional trade events](docs/simulator.md)
+- [Historical price downloads and resume instructions](docs/historical_prices.md)
+- [BNY identity checks and repair](docs/bny_identity.md)
+- [Review of the remaining short histories](docs/coverage_review.md)
 
 This is a learning project, not a deployed daily service. Snowflake currently
 covers first-day holdings and position values; cash, settlement and NAV logic
