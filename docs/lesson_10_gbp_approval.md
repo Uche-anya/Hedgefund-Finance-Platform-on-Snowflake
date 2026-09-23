@@ -37,9 +37,9 @@ $nav = 'data/landing/2025-01-06/18ae80085f1043789b5d604ee44dc216'
 $usd = 'data/landing/2025-01-08/213ac7b4b9a84e009ae529b887ce0a0c'
 $fx = 'data/fx/f5a7a63c62c44150b12ebbfdc7a09203'
 $db = 'data/my_gbp_review.sqlite'
-$reference = python gbp_reference.py --references $usd --fx-delivery $fx --as-of 2025-01-08
-$candidate = python publication.py --database $db prepare --delivery $nav --references $usd --fx-delivery $fx --gbp-references $reference --business-date 2025-01-06 --as-of 2025-01-08 --currency GBP
-python publication.py --database $db show --candidate $candidate
+$reference = python -m fund_pipeline.gbp_reference --references $usd --fx-delivery $fx --as-of 2025-01-08
+$candidate = python -m fund_pipeline.publication --database $db prepare --delivery $nav --references $usd --fx-delivery $fx --gbp-references $reference --business-date 2025-01-06 --as-of 2025-01-08 --currency GBP
+python -m fund_pipeline.publication --database $db show --candidate $candidate
 ```
 
 A **candidate** is a saved result waiting for review. Read its `controls`, original
@@ -51,9 +51,9 @@ Use a separate database for this scenario.
 After inspecting the result, a learning approval can be recorded as:
 
 ```powershell
-python publication.py --database $db approve --candidate $candidate --by demo-reviewer --note 'Reviewed USD and GBP checks and same-date FX evidence; learning demonstration' --expected-version 0
-python publication.py --database $db publish --candidate $candidate
-python publication.py --database $db current --as-of 2025-01-08
+python -m fund_pipeline.publication --database $db approve --candidate $candidate --by demo-reviewer --note 'Reviewed USD and GBP checks and same-date FX evidence; learning demonstration' --expected-version 0
+python -m fund_pipeline.publication --database $db publish --candidate $candidate
+python -m fund_pipeline.publication --database $db current --as-of 2025-01-08
 ```
 
 `0` means no version has been published for that date. If one already exists,
@@ -73,6 +73,6 @@ Review and publication use the frozen candidate. They do not recalculate from
 files that may have changed since preparation. Source monitoring and discovering
 provider revisions are still future work.
 
-Read `gbp_reference.py` first, then `reconcile_gbp.py`, then the small extension
+Read `fund_pipeline/gbp_reference.py` first, then `fund_pipeline/reconcile_gbp.py`, then the small extension
 to `publication.prepare`. SQLite still handles the same approval transactions
 and version history from Part 7. This remains a local learning workflow.

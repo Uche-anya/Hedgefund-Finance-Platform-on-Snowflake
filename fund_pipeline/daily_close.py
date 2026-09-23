@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
-from landing import verify_delivery
+from fund_pipeline.landing import verify_delivery
 
 
 def read_rows(path, business_date):
@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--delivery", type=Path, help="Use a saved delivery instead of fixtures")
     args = parser.parse_args()
     business_date = args.business_date.isoformat()
-    folder = args.delivery or Path(__file__).parent / "fixtures" / business_date
+    folder = args.delivery or Path(__file__).resolve().parents[1] / "fixtures" / business_date
     if args.delivery:
         manifest = verify_delivery(folder, business_date)
         print(f"Input delivery: {manifest['delivery_id']}")

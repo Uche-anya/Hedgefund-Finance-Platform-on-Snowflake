@@ -4,8 +4,8 @@ import unittest
 from decimal import Decimal
 from pathlib import Path
 
-from build_positions import build_positions
-from landing import land_delivery, verify_delivery
+from fund_pipeline.build_positions import build_positions
+from fund_pipeline.landing import land_delivery, verify_delivery
 
 
 class PositionTests(unittest.TestCase):

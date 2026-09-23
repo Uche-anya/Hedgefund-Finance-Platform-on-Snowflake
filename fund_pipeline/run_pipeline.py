@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from fx_rates import verify_fx
-from landing import verify_delivery
-from publication import check_eligible, now, prepare_candidate, show
-from run_config import DATE_FIELDS, PATH_FIELDS, read_config
+from data_extraction.fx_rates import verify_fx
+from fund_pipeline.landing import verify_delivery
+from fund_pipeline.publication import check_eligible, now, prepare_candidate, show
+from fund_pipeline.run_config import DATE_FIELDS, PATH_FIELDS, read_config
 
 
 def save_run(path, record):
@@ -94,7 +94,7 @@ def main():
     parser.add_argument("--gbp-references", type=Path)
     parser.add_argument("--business-date")
     parser.add_argument("--as-of")
-    root = Path(__file__).resolve().parent / "data"
+    root = Path(__file__).resolve().parents[1] / "data"
     parser.add_argument("--database", type=Path)
     parser.add_argument("--run-root", type=Path)
     args = parser.parse_args()

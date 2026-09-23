@@ -9,7 +9,7 @@ from pathlib import Path
 import sqlite3
 from uuid import uuid4
 
-from reconcile import reconcile
+from fund_pipeline.reconcile import reconcile
 
 
 SCHEMA = """
@@ -108,20 +108,20 @@ def prepare_candidate(db_path, nav_folder, reference_folder, business_date, as_o
                       fx_folder=None, gbp_reference_folder=None, reuse=False):
     business_date = date.fromisoformat(business_date).isoformat()
     as_of = date.fromisoformat(as_of).isoformat()
-    root = Path(__file__).resolve().parent
-    sources = ("build_positions.py", "cash_settlement.py", "fund_nav.py", "reconcile.py", "landing.py", "daily_close.py", "publication.py")
+    root = Path(__file__).resolve().parents[1]
+    sources = ("fund_pipeline/build_positions.py", "fund_pipeline/cash_settlement.py", "fund_pipeline/fund_nav.py", "fund_pipeline/reconcile.py", "fund_pipeline/landing.py", "fund_pipeline/daily_close.py", "fund_pipeline/publication.py")
     if (fx_folder is None) != (gbp_reference_folder is None):
         raise ValueError("Supply both FX and GBP reference deliveries")
     if fx_folder is not None:
         if currency != "GBP":
             raise ValueError("FX reporting requires GBP output currency")
-        sources += ("fx_rates.py", "market_prices.py", "report_gbp.py", "gbp_reference.py", "reconcile_gbp.py")
+        sources += ("data_extraction/fx_rates.py", "data_extraction/market_prices.py", "fund_pipeline/report_gbp.py", "fund_pipeline/gbp_reference.py", "fund_pipeline/reconcile_gbp.py")
     code = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in sources}
     input_key = None
     if reuse:
         # Verify current files even when a previous result may be reusable.
-        from landing import verify_delivery
-        from fx_rates import verify_fx
+        from fund_pipeline.landing import verify_delivery
+        from data_extraction.fx_rates import verify_fx
         verify_delivery(nav_folder, business_date, "nav")
         verify_delivery(reference_folder, as_of, "references")
         folders = {"nav": nav_folder, "references": reference_folder}
@@ -139,7 +139,7 @@ def prepare_candidate(db_path, nav_folder, reference_folder, business_date, as_o
     def calculate_report():
         if fx_folder is None:
             return reconcile(nav_folder, reference_folder, business_date, as_of, currency)
-        from reconcile_gbp import reconcile_gbp
+        from fund_pipeline.reconcile_gbp import reconcile_gbp
         return reconcile_gbp(nav_folder, reference_folder, fx_folder, gbp_reference_folder, business_date, as_of)
 
     # Ordinary preparation keeps its original behaviour: invalid inputs do not
@@ -249,7 +249,7 @@ def current(db_path, as_of):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--database", type=Path, default=Path(__file__).resolve().parent / "data" / "publication.sqlite")
+    parser.add_argument("--database", type=Path, default=Path(__file__).resolve().parents[1] / "data" / "publication.sqlite")
     commands = parser.add_subparsers(dest="command", required=True)
     create = commands.add_parser("prepare")
     create.add_argument("--business-date", required=True, type=date.fromisoformat)

@@ -1,6 +1,6 @@
 # Investigate BK and BNY before joining their prices
 
-Run `python check_bny_identity.py` and paste the Massive key at its hidden prompt.
+Run `python -m data_extraction.check_bny_identity` and paste the Massive key at its hidden prompt.
 Four reference requests are spaced 13 seconds apart. The check takes roughly
 40 seconds plus network time. Raw responses, identities.csv and a manifest are
 saved under data/reference_checks in a new folder. No price file is modified.
@@ -32,7 +32,7 @@ The missing CIK on May 21 remains missing; it is not fabricated.
 
 ## Build the separate bank history
 
-Run `python repair_bny_history.py` and enter the API key at the hidden prompt.
+Run `python -m data_extraction.repair_bny_history` and enter the API key at the hidden prompt.
 The defaults point to our completed price and reference snapshots. Optional
 --snapshot and --references arguments accept other matching snapshot folders.
 
@@ -59,9 +59,9 @@ the repair; integration follows review of the new output.
 
 ## Block repair
 
-`python check_xyz_identity.py` confirmed matching CIK and share-class FIGI for
+`python -m data_extraction.check_xyz_identity` confirmed matching CIK and share-class FIGI for
 SQ on January 17, 2025 and XYZ on January 21, 2025. Run
-`python repair_xyz_history.py` to create a separate Block history using SQ before
+`python -m data_extraction.repair_xyz_history` to create a separate Block history using SQ before
 January 21 and XYZ from that date. It uses the same preservation and coverage
 checks described above and writes block_prices.csv.
 

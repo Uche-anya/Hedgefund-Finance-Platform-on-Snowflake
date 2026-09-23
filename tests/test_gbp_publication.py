@@ -6,12 +6,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from build_hybrid import build_hybrid
-from fx_rates import download_fx
-from gbp_reference import build_reference
-from landing import land_delivery
-from market_prices import DATES, download
-from publication import approve, current, prepare, publish, show
+from fund_pipeline.build_hybrid import build_hybrid
+from data_extraction.fx_rates import download_fx
+from fund_pipeline.gbp_reference import build_reference
+from fund_pipeline.landing import land_delivery
+from data_extraction.market_prices import DATES, download
+from fund_pipeline.publication import approve, current, prepare, publish, show
 from test_fx_reporting import synthetic_ecb
 
 
@@ -23,7 +23,7 @@ class GbpPublicationTests(unittest.TestCase):
         def prices(value):
             return json.dumps([dict(date=day, open=value, high=value + 1, low=value - 1,
                                     close=value, volume=100) for day in DATES]).encode()
-        with patch("market_prices.fetch", side_effect=[prices(100), prices(200)]):
+        with patch("data_extraction.market_prices.fetch", side_effect=[prices(100), prices(200)]):
             market = download(self.root / "market")
         scenario = build_hybrid(market, self.root)
         self.nav = Path(scenario["nav_delivery"])
@@ -32,7 +32,7 @@ class GbpPublicationTests(unittest.TestCase):
         self.fx, self.reference = self.new_fx(synthetic_ecb())
 
     def new_fx(self, raw):
-        with patch("fx_rates.fetch", return_value=raw):
+        with patch("data_extraction.fx_rates.fetch", return_value=raw):
             fx = download_fx(self.root / "synthetic_fx")
         # Test data is explicitly labelled, including the correction scenario.
         path = fx / "manifest.json"

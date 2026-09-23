@@ -11,11 +11,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from build_hybrid import build_hybrid
-from daily_close import pounds
-from fx_rates import download_fx, normalize, verify_fx
-from market_prices import DATES, download
-from report_gbp import calculate_gbp, translate
+from fund_pipeline.build_hybrid import build_hybrid
+from fund_pipeline.daily_close import pounds
+from data_extraction.fx_rates import download_fx, normalize, verify_fx
+from data_extraction.market_prices import DATES, download
+from fund_pipeline.report_gbp import calculate_gbp, translate
 
 
 def synthetic_ecb():
@@ -36,14 +36,14 @@ class FxReportingTests(unittest.TestCase):
         self.raw = synthetic_ecb()
 
     def fx_delivery(self):
-        with patch("fx_rates.fetch", return_value=self.raw):
+        with patch("data_extraction.fx_rates.fetch", return_value=self.raw):
             return download_fx(self.root / "fx")
 
     def nav_delivery(self):
         def payload(price):
             return json.dumps([{"date": day, "open": price, "high": price + 1, "low": price - 1,
                                 "close": price, "volume": 100} for day in DATES]).encode()
-        with patch("market_prices.fetch", side_effect=[payload(100), payload(200)]):
+        with patch("data_extraction.market_prices.fetch", side_effect=[payload(100), payload(200)]):
             market = download(self.root / "market")
         return Path(build_hybrid(market, self.root)["nav_delivery"])
 
@@ -99,7 +99,7 @@ class FxReportingTests(unittest.TestCase):
                     normalize(self.raw.replace(old.encode(), new.encode()))
 
     def test_failed_download_preserves_raw_and_has_no_ready_manifest(self):
-        with patch("fx_rates.fetch", return_value=b"service unavailable"):
+        with patch("data_extraction.fx_rates.fetch", return_value=b"service unavailable"):
             with self.assertRaisesRegex(RuntimeError, "Incomplete FX"):
                 download_fx(self.root / "fx")
         folder = next((self.root / "fx").iterdir())

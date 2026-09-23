@@ -92,7 +92,7 @@ def main():
     parser.add_argument("--business-date", required=True, type=date.fromisoformat)
     parser.add_argument("--bundle", choices=BUNDLES, default="valuation")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parents[1]
     business_date = args.business_date.isoformat()
     source = root / "fixtures" / business_date
     if args.bundle != "valuation":

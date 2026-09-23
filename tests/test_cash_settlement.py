@@ -4,8 +4,8 @@ import unittest
 from decimal import Decimal
 from pathlib import Path
 
-from cash_settlement import calculate_cash
-from landing import land_delivery, verify_delivery
+from fund_pipeline.cash_settlement import calculate_cash
+from fund_pipeline.landing import land_delivery, verify_delivery
 
 
 class CashSettlementTests(unittest.TestCase):

@@ -4,7 +4,7 @@ from datetime import date, timedelta
 import hashlib
 import json
 
-from run_config import unique_fields
+from fund_pipeline.run_config import unique_fields
 
 
 POLICY = "WEEKDAYS_ONLY_NO_HOLIDAYS"

@@ -4,8 +4,8 @@ import unittest
 from decimal import Decimal
 from pathlib import Path
 
-from fund_nav import calculate_nav
-from landing import land_delivery, verify_delivery
+from fund_pipeline.fund_nav import calculate_nav
+from fund_pipeline.landing import land_delivery, verify_delivery
 
 
 class FundNavTests(unittest.TestCase):

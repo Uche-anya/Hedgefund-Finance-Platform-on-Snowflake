@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import unittest
 
-from repair_bny_history import combine_prices
+from data_extraction.repair_bny_history import combine_prices
 
 
 def prices(ticker, dates, price):

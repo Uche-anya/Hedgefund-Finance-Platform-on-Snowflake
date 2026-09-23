@@ -28,9 +28,9 @@ funds, currencies or bases rather than compare unlike numbers.
 ## Run the matching comparison
 
 ```powershell
-$navDelivery = python landing.py --business-date 2026-09-14 --bundle nav
-$referenceDelivery = python landing.py --business-date 2026-09-16 --bundle references
-python reconcile.py --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery" --references "$referenceDelivery"
+$navDelivery = python -m fund_pipeline.landing --business-date 2026-09-14 --bundle nav
+$referenceDelivery = python -m fund_pipeline.landing --business-date 2026-09-16 --bundle references
+python -m fund_pipeline.reconcile --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery" --references "$referenceDelivery"
 ```
 
 The trade batch is from 14 September, but the requested close and statements
@@ -42,7 +42,7 @@ delivery identifiers behind each check.
 ## Run the intentional 69-share mismatch
 
 ```powershell
-python reconcile.py --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery" --references "$referenceDelivery" --demo-alpha-69
+python -m fund_pipeline.reconcile --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery" --references "$referenceDelivery" --demo-alpha-69
 ```
 
 The demo copies the reference delivery into a temporary source directory,

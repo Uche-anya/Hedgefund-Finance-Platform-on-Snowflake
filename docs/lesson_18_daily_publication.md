@@ -16,12 +16,12 @@ Use the activity, prices and reference delivery variables from Part 17, or land
 them again:
 
 ```powershell
-$activity = python landing.py --business-date 2025-01-09 --bundle daily_cash
-$prices = python landing.py --business-date 2025-01-09 --bundle daily_prices
-$references = python landing.py --business-date 2025-01-09 --bundle daily_references
+$activity = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_cash
+$prices = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_prices
+$references = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_references
 $db = 'data/my_daily_usd_review.sqlite'
-$candidate = python prepare_daily.py --database $db --opening-database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices --references $references
-python publication.py --database $db show --candidate $candidate
+$candidate = python -m fund_pipeline.prepare_daily --database $db --opening-database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices --references $references
+python -m fund_pipeline.publication --database $db show --candidate $candidate
 ```
 
 There are two databases here. `--opening-database` supplies the published opening
@@ -35,9 +35,9 @@ known execution IDs are SIM-E001, SIM-E002, SIM-D2-E001 and SIM-D2-E002.
 After reviewing the candidate, these are the learning-demo approval commands:
 
 ```powershell
-python publication.py --database $db approve --candidate $candidate --by demo-reviewer --note 'Reviewed synthetic next-day USD controls and history' --expected-version 0
-python publication.py --database $db publish --candidate $candidate
-python publication.py --database $db current --as-of 2025-01-09
+python -m fund_pipeline.publication --database $db approve --candidate $candidate --by demo-reviewer --note 'Reviewed synthetic next-day USD controls and history' --expected-version 0
+python -m fund_pipeline.publication --database $db publish --candidate $candidate
+python -m fund_pipeline.publication --database $db current --as-of 2025-01-09
 ```
 
 Expected version 0 means no publication exists for 9 January in that database.

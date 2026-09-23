@@ -33,9 +33,9 @@ reduces NAV by USD 3 while we remain short three shares.
 ## Run the lesson
 
 ```powershell
-$activity = python landing.py --business-date 2025-01-09 --bundle daily_cash
-$prices = python landing.py --business-date 2025-01-09 --bundle daily_prices
-python daily_nav.py --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices
+$activity = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_cash
+$prices = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_prices
+python -m fund_pipeline.daily_nav --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices
 ```
 
 The command needs Part 10's existing demonstration publication. A fresh checkout
@@ -43,7 +43,7 @@ must prepare that opening publication or supply an appropriate one. Both new
 deliveries are labelled synthetic by the landing command. Prices are preserved
 with their own manifest and verified before valuation.
 
-`daily_nav.py` calls the daily cash calculation, then reads holdings from that
+`fund_pipeline/daily_nav.py` calls the daily cash calculation, then reads holdings from that
 same opening candidate ID. It does not select the latest opening publication a
 second time, which could mix two versions if a correction were published during
 the run. Today's holdings and cash use the same activity delivery.

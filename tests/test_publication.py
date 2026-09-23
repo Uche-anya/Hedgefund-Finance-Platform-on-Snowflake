@@ -8,9 +8,9 @@ import sys
 import tempfile
 import unittest
 
-from landing import land_delivery
-from publication import approve, current, database, prepare, publish, show
-from reconcile import make_demo_delivery
+from fund_pipeline.landing import land_delivery
+from fund_pipeline.publication import approve, current, database, prepare, publish, show
+from fund_pipeline.reconcile import make_demo_delivery
 
 
 class PublicationTests(unittest.TestCase):
@@ -162,7 +162,7 @@ class PublicationTests(unittest.TestCase):
             self.approve(candidate)
 
     def test_cli_prepare_review_approve_publish_and_read(self):
-        base = [sys.executable, str(self.repo / "publication.py"), "--database", str(self.db)]
+        base = [sys.executable, "-m", "fund_pipeline.publication", "--database", str(self.db)]
         def run(*args):
             result = subprocess.run(base + list(args), capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)

@@ -77,7 +77,7 @@ ALREADY_PUBLISHED refers to that candidate's original publication; it does not
 mean it is the latest published version. The `current` command remains the way
 to read the latest version. A stale approval still cannot publish over a newer
 version. If a new review is required for identical inputs, use the explicit
-`publication.py prepare` workflow to create a fresh candidate for that review.
+`fund_pipeline/publication.py prepare` workflow to create a fresh candidate for that review.
 
 ## Recovery and limits
 
@@ -90,5 +90,5 @@ Reuse is scoped to the selected database. Another database has its own history.
 Financial code changes force recalculation; edits only to the runner's messages
 do not change the financial key. Each run separately records its runner checksum.
 
-Read `prepare_candidate` in `publication.py`, then its call in `run_pipeline.py`.
+Read `prepare_candidate` in `fund_pipeline/publication.py`, then its call in `fund_pipeline/run_pipeline.py`.
 The financial formulas are unchanged.

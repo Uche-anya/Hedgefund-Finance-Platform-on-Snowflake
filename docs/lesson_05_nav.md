@@ -38,8 +38,8 @@ changes outstanding amounts into cash. In a real daily series, prices can move.
 ## Run it in PowerShell
 
 ```powershell
-$navDelivery = python landing.py --business-date 2026-09-14 --bundle nav
-python fund_nav.py --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery"
+$navDelivery = python -m fund_pipeline.landing --business-date 2026-09-14 --bundle nav
+python -m fund_pipeline.fund_nav --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery"
 ```
 
 Change `--as-of` to `2026-09-14` or `2026-09-15` to see the unsettled balances.

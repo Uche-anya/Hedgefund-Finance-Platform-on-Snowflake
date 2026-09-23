@@ -6,12 +6,12 @@ import hashlib
 import json
 from pathlib import Path
 
-from build_positions import build_positions
-from carry_cash import carry_cash
-from daily_close import pounds
-from fund_nav import read_closing_prices
-from landing import verify_delivery
-from publication import show
+from fund_pipeline.build_positions import build_positions
+from fund_pipeline.carry_cash import carry_cash
+from fund_pipeline.daily_close import pounds
+from fund_pipeline.fund_nav import read_closing_prices
+from fund_pipeline.landing import verify_delivery
+from fund_pipeline.publication import show
 
 
 def daily_nav(database, previous_date, activity, price_folder, business_date, calendar=None):
@@ -68,7 +68,7 @@ def main():
     parser.add_argument("--prices", type=Path, required=True)
     args = parser.parse_args()
     report = daily_nav(args.database, args.previous_date, args.delivery, args.prices, args.business_date)
-    folder = Path(__file__).resolve().parent / "data" / "daily_nav"
+    folder = Path(__file__).resolve().parents[1] / "data" / "daily_nav"
     folder.mkdir(parents=True, exist_ok=True)
     output = folder / f"{report['run_id']}.json"
     temporary = output.with_suffix(".tmp")

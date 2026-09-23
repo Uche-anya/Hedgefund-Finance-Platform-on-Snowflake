@@ -3,7 +3,7 @@
 Run from the project folder:
 
 ```powershell
-python simulator.py
+python -m simulation.simulator
 ```
 
 This creates five fictional historical executions on January 6, 2025:

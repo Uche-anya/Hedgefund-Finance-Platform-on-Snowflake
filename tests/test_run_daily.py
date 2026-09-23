@@ -1,14 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import unittest
 from unittest.mock import patch
 
-from publication import approve, publish, show
-from reconcile_daily import make_mismatch
-from run_daily import read_daily_config, run_daily
+from fund_pipeline.publication import approve, publish, show
+from fund_pipeline.reconcile_daily import make_mismatch
+from fund_pipeline.run_daily import read_daily_config, run_daily
 import test_daily_publication
 
 
@@ -89,9 +90,9 @@ class DailyRunnerTests(unittest.TestCase):
         self.assertEqual(resolved["delivery"], self.settings["delivery"])
         other = root / "elsewhere"
         other.mkdir()
-        script = Path(__file__).resolve().parents[1] / "run_daily.py"
-        result = subprocess.run([sys.executable, str(script), "--config", str(config)],
-                                cwd=other, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-m", "fund_pipeline.run_daily", "--config", str(config)],
+                                cwd=other, capture_output=True, text=True,
+                                env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("READY_FOR_REVIEW", result.stdout)
         config.write_text(json.dumps({**values, "business_date": "2025-01-11"}))

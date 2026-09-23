@@ -3,9 +3,9 @@ from pathlib import Path
 import shutil
 import unittest
 
-from daily_nav import daily_nav
-from landing import land_delivery
-from publication import approve, publish
+from fund_pipeline.daily_nav import daily_nav
+from fund_pipeline.landing import land_delivery
+from fund_pipeline.publication import approve, publish
 import test_gbp_publication
 
 

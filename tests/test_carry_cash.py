@@ -5,9 +5,9 @@ import shutil
 import tempfile
 import unittest
 
-from carry_cash import carry_cash, roll_cash
-from landing import land_delivery
-from publication import approve, publish
+from fund_pipeline.carry_cash import carry_cash, roll_cash
+from fund_pipeline.landing import land_delivery
+from fund_pipeline.publication import approve, publish
 import test_gbp_publication
 
 

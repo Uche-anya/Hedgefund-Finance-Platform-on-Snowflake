@@ -3,7 +3,7 @@
 Run 10 January using the published 9 January close:
 
 ```powershell
-python run_daily.py --config configs/daily_usd_2025-01-10.json
+python -m fund_pipeline.run_daily --config configs/daily_usd_2025-01-10.json
 ```
 
 All new activity, prices and comparison statements in this lesson are simulated.
@@ -43,7 +43,7 @@ The USD 720 payment itself does not reduce NAV: cash and debt fall together.
 ## Inspect the saved result
 
 ```powershell
-python publication.py --database data/daily_usd_pipeline.sqlite show --candidate 8b6b95dd57f7487994e23cd588005c3b
+python -m fund_pipeline.publication --database data/daily_usd_pipeline.sqlite show --candidate 8b6b95dd57f7487994e23cd588005c3b
 ```
 
 The demonstration run is `b8ee62d0df4a44ceb02607c25c36270a`, saved under
@@ -64,5 +64,5 @@ Reading `current` confirmed USD 7,528.05 cash, zero unpaid obligations, USD 10,1
 NAV and all four known execution IDs. It can now supply a later daily opening.
 
 ```powershell
-python publication.py --database data/daily_usd_pipeline.sqlite current --as-of 2025-01-10
+python -m fund_pipeline.publication --database data/daily_usd_pipeline.sqlite current --as-of 2025-01-10
 ```

@@ -130,4 +130,4 @@ def verify_market(folder):
 
 
 if __name__ == "__main__":
-    print(download(Path(__file__).resolve().parent / "data" / "market"))
+    print(download(Path(__file__).resolve().parents[1] / "data" / "market"))

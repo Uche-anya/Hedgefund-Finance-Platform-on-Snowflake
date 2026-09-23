@@ -7,9 +7,9 @@ import hashlib
 from pathlib import Path
 import tempfile
 
-from fx_rates import verify_fx
-from landing import land_delivery, verify_delivery
-from reconcile import read_reference
+from data_extraction.fx_rates import verify_fx
+from fund_pipeline.landing import land_delivery, verify_delivery
+from fund_pipeline.reconcile import read_reference
 
 
 COLUMNS = ["business_date", "fund", "currency", "component", "amount"]
@@ -66,4 +66,4 @@ if __name__ == "__main__":
     parser.add_argument("--as-of", required=True)
     args = parser.parse_args()
     print(build_reference(args.references, args.fx_delivery, args.as_of,
-                          Path(__file__).resolve().parent / "data" / "landing"))
+                          Path(__file__).resolve().parents[1] / "data" / "landing"))

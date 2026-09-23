@@ -17,7 +17,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 
-UNIVERSE = Path(__file__).resolve().parent / "config" / "stock_universe.csv"
+UNIVERSE = Path(__file__).resolve().parents[1] / "config" / "stock_universe.csv"
 # Keep a day inside the rolling two-year entitlement and exclude today.
 TODAY = datetime.now(ZoneInfo("America/New_York")).date()
 try:
@@ -158,7 +158,7 @@ def download(root, api_key, symbols=None, resume=None):
 
     start, end = plan["start"], plan["end"]
     print(f"{len(symbols)} tickers | {start} to {end}", flush=True)
-    print(f'Resume command: python historical_prices.py --resume "{folder}"', flush=True)
+    print(f'Resume command: python -m data_extraction.historical_prices --resume "{folder}"', flush=True)
     total_rows = 0
     requested = False
 
@@ -223,7 +223,7 @@ def main():
     if not key:
         key = getpass("Massive API key (hidden): ")
 
-    output_folder = Path(__file__).resolve().parent / "data" / "historical_prices"
+    output_folder = Path(__file__).resolve().parents[1] / "data" / "historical_prices"
     try:
         folder = download(output_folder, key, resume=args.resume)
     except (ValueError, RuntimeError) as error:

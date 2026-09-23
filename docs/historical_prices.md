@@ -19,7 +19,7 @@ New listings and ticker changes can also have shorter price histories.
 
 ## Run
 
-Run: python historical_prices.py
+Run: python -m data_extraction.historical_prices
 
 Paste your key at the hidden prompt. It is not stored. MASSIVE_API_KEY can also
 supply the key through the environment.
@@ -36,7 +36,7 @@ minutes plus network time. Other activity on your key shares the rate limit.
 ## Resume
 
 The program prints the exact resume command at startup:
-python historical_prices.py --resume "data/historical_prices/YOUR_FOLDER_ID"
+python -m data_extraction.historical_prices --resume "data/historical_prices/YOUR_FOLDER_ID"
 
 Use it after Ctrl+C or a network failure. Completed files are validated and their
 fingerprints checked before being skipped. Only unfinished tickers are fetched.

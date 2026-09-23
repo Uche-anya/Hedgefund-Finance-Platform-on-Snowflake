@@ -8,10 +8,10 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from daily_close import pounds
-from fund_nav import calculate_nav
-from fx_rates import verify_fx, SOURCE
-from landing import verify_delivery
+from fund_pipeline.daily_close import pounds
+from fund_pipeline.fund_nav import calculate_nav
+from data_extraction.fx_rates import verify_fx, SOURCE
+from fund_pipeline.landing import verify_delivery
 
 
 def translate(usd_close, fx):
@@ -61,7 +61,7 @@ def main():
     parser.add_argument("--as-of", type=date.fromisoformat, required=True)
     args = parser.parse_args()
     report = calculate_gbp(args.delivery, args.fx_delivery, args.business_date.isoformat(), args.as_of.isoformat())
-    root = Path(__file__).resolve().parent / "data" / "reporting"
+    root = Path(__file__).resolve().parents[1] / "data" / "reporting"
     root.mkdir(parents=True, exist_ok=True)
     output = root / f"{report['run_id']}.json"
     temporary = output.with_suffix(".json.tmp")

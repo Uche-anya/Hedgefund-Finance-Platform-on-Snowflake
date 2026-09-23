@@ -58,10 +58,10 @@ A missing confirmation means the amount remains outstanding, even after it is du
 ## Run it in PowerShell
 
 ```powershell
-$settlement = python landing.py --business-date 2026-09-14 --bundle settlement
-python cash_settlement.py --business-date 2026-09-14 --as-of 2026-09-14 --delivery "$settlement"
-python cash_settlement.py --business-date 2026-09-14 --as-of 2026-09-15 --delivery "$settlement"
-python cash_settlement.py --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$settlement"
+$settlement = python -m fund_pipeline.landing --business-date 2026-09-14 --bundle settlement
+python -m fund_pipeline.cash_settlement --business-date 2026-09-14 --as-of 2026-09-14 --delivery "$settlement"
+python -m fund_pipeline.cash_settlement --business-date 2026-09-14 --as-of 2026-09-15 --delivery "$settlement"
+python -m fund_pipeline.cash_settlement --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$settlement"
 ```
 
 Each command rebuilds from the same original opening cash. It does not take

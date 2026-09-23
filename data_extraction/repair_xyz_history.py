@@ -11,13 +11,13 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
-from check_bny_identity import read_identity
-from check_xyz_identity import CHECKS
-from historical_prices import fetch, inspect_bars, write_json
-from repair_bny_history import bar_date, checked_file
+from data_extraction.check_bny_identity import read_identity
+from data_extraction.check_xyz_identity import CHECKS
+from data_extraction.historical_prices import fetch, inspect_bars, write_json
+from data_extraction.repair_bny_history import bar_date, checked_file
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data/historical_prices/a7f9a9e28bf3430c97e6a776bcdafba9"
 REFERENCES = ROOT / "data/reference_checks/4c6f68fe8a90417f96a22d7bc5cd726f"
 CHANGE_DATE = "2025-01-21"

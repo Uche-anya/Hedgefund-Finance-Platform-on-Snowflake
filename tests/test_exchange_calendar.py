@@ -5,9 +5,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from business_calendar import read_calendar, validate_close_dates
-from carry_cash import roll_cash
-from run_daily import run_daily, read_daily_config
+from fund_pipeline.business_calendar import read_calendar, validate_close_dates
+from fund_pipeline.carry_cash import roll_cash
+from fund_pipeline.run_daily import run_daily, read_daily_config
 import test_run_daily
 
 
@@ -109,7 +109,7 @@ class ExchangeCalendarTests(unittest.TestCase):
         second = run_daily(settings)
         self.assertEqual(second["status"], "READY_FOR_REVIEW")
         self.assertNotEqual(first["candidate_id"], second["candidate_id"])
-        from publication import show
+        from fund_pipeline.publication import show
         stored = show(settings["database"], first["candidate_id"])["candidate"]["reconciliation"]["calendar"]
         self.assertEqual(stored["snapshot"]["version"], "project-v1")
 

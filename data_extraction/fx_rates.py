@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from market_prices import DATES, fetch
+from data_extraction.market_prices import DATES, fetch
 
 
 URL = ("https://data-api.ecb.europa.eu/service/data/EXR/D.USD+GBP.EUR.SP00.A"
@@ -114,4 +114,4 @@ def verify_fx(folder):
 
 
 if __name__ == "__main__":
-    print(download_fx(Path(__file__).resolve().parent / "data" / "fx"))
+    print(download_fx(Path(__file__).resolve().parents[1] / "data" / "fx"))

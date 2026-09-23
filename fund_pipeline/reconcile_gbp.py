@@ -3,11 +3,11 @@
 from decimal import Decimal, localcontext
 import json
 
-from fx_rates import verify_fx
-from gbp_reference import COLUMNS, fingerprint, raw_legs
-from landing import verify_delivery
-from reconcile import compare_values, read_reference, reconcile
-from report_gbp import translate
+from data_extraction.fx_rates import verify_fx
+from fund_pipeline.gbp_reference import COLUMNS, fingerprint, raw_legs
+from fund_pipeline.landing import verify_delivery
+from fund_pipeline.reconcile import compare_values, read_reference, reconcile
+from fund_pipeline.report_gbp import translate
 
 
 def reconcile_gbp(nav_folder, reference_folder, fx_folder, gbp_folder, business_date, as_of):

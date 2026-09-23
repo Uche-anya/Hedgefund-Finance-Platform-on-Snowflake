@@ -8,12 +8,12 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from build_positions import build_positions, positive_quantity, read_events
-from business_calendar import calendar_policy, validate_close_dates
-from cash_settlement import cash_amount
-from daily_close import pounds
-from landing import verify_delivery
-from publication import current, now, show
+from fund_pipeline.build_positions import build_positions, positive_quantity, read_events
+from fund_pipeline.business_calendar import calendar_policy, validate_close_dates
+from fund_pipeline.cash_settlement import cash_amount
+from fund_pipeline.daily_close import pounds
+from fund_pipeline.landing import verify_delivery
+from fund_pipeline.publication import current, now, show
 
 
 def roll_cash(opening, folder, previous_date, business_date, calendar=None):
@@ -137,7 +137,7 @@ def main():
     parser.add_argument("--delivery", type=Path, required=True)
     args = parser.parse_args()
     report = carry_cash(args.database, args.previous_date, args.delivery, args.business_date)
-    folder = Path(__file__).resolve().parent / "data" / "cash"
+    folder = Path(__file__).resolve().parents[1] / "data" / "cash"
     folder.mkdir(parents=True, exist_ok=True)
     output = folder / f"{report['run_id']}.json"
     temporary = output.with_suffix(".tmp")

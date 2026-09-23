@@ -111,7 +111,7 @@ New FX versions require matching references and new reviews. See
 
 ## Saved-input pipeline runner
 
-Part 11 provides `run_pipeline.py` for one-command historical replay of explicitly
+Part 11 provides `fund_pipeline/run_pipeline.py` for one-command historical replay of explicitly
 selected saved deliveries. It checks inputs, prepares the reconciled candidate,
 checks eligibility and records READY_FOR_REVIEW or FAILED with an error stage.
 It does not approve or publish. Each attempt gets a separate run record and each

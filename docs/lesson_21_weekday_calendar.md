@@ -11,7 +11,7 @@ weekday: Friday cannot jump straight to Tuesday without Monday's close.
 ## Run Monday
 
 ```powershell
-python run_daily.py --config configs/daily_usd_2025-01-13.json
+python -m fund_pipeline.run_daily --config configs/daily_usd_2025-01-13.json
 ```
 
 The example uses Friday's published version 1 in `data/daily_usd_pipeline.sqlite`.
@@ -71,7 +71,7 @@ Monday. The approval gate continues to block overdue obligations.
 
 ## Code and limitations
 
-`business_calendar.py` holds the shared date rule. Configuration, holdings and
+`fund_pipeline/business_calendar.py` holds the shared date rule. Configuration, holdings and
 cash processing all use it. The policy is stored in new run records and reports,
 and the calendar code is included in daily candidate fingerprints, so a calendar
 code change cannot silently reuse an earlier candidate.

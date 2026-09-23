@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from publication import check_eligible, database, now, read_candidate
-from reconcile_daily import reconcile_daily
+from fund_pipeline.publication import check_eligible, database, now, read_candidate
+from fund_pipeline.reconcile_daily import reconcile_daily
 
 
 def prepare_daily(db_path, opening_database, previous_date, activity, prices, references, business_date):
@@ -24,10 +24,10 @@ def prepare_daily_candidate(db_path, opening_database, previous_date, activity, 
     report = reconcile_daily(opening_database, previous_date, activity, prices, references, business_date, calendar)
     if report["close"]["currency"] != "USD":
         raise ValueError("Daily publication currently supports USD closes only")
-    root = Path(__file__).resolve().parent
-    sources = ("prepare_daily.py", "reconcile_daily.py", "daily_nav.py", "carry_cash.py",
-               "build_positions.py", "cash_settlement.py", "fund_nav.py", "daily_close.py",
-               "landing.py", "reconcile.py", "publication.py", "business_calendar.py", "run_config.py")
+    root = Path(__file__).resolve().parents[1]
+    sources = ("fund_pipeline/prepare_daily.py", "fund_pipeline/reconcile_daily.py", "fund_pipeline/daily_nav.py", "fund_pipeline/carry_cash.py",
+               "fund_pipeline/build_positions.py", "fund_pipeline/cash_settlement.py", "fund_pipeline/fund_nav.py", "fund_pipeline/daily_close.py",
+               "fund_pipeline/landing.py", "fund_pipeline/reconcile.py", "fund_pipeline/publication.py", "fund_pipeline/business_calendar.py", "fund_pipeline/run_config.py")
     candidate_id = uuid4().hex
     candidate = {"candidate_id": candidate_id, "kind": "daily_usd", "as_of": business_date,
                  "trade_batch_date": business_date, "created_at": now(), "reconciliation": report,

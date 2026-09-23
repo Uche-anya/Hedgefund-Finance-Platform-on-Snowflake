@@ -10,8 +10,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from uuid import uuid4
 
-from fund_nav import calculate_nav
-from landing import land_delivery, verify_delivery
+from fund_pipeline.fund_nav import calculate_nav
+from fund_pipeline.landing import land_delivery, verify_delivery
 
 
 def read_reference(path, columns, keys, value_column, required):
@@ -134,7 +134,7 @@ def main():
     parser.add_argument("--demo-alpha-69", action="store_true", help="Inject a labelled mismatch in a new reference delivery")
     args = parser.parse_args()
     business_date, as_of = args.business_date.isoformat(), args.as_of.isoformat()
-    root = Path(__file__).resolve().parent / "data"
+    root = Path(__file__).resolve().parents[1] / "data"
     reference_folder = args.references
     if args.demo_alpha_69:
         verify_delivery(reference_folder, as_of, "references")

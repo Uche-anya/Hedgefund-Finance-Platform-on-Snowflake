@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -7,10 +8,10 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
-from landing import land_delivery
-from publication import approve, publish, show
-from run_pipeline import run_pipeline
-from run_config import read_config
+from fund_pipeline.landing import land_delivery
+from fund_pipeline.publication import approve, publish, show
+from fund_pipeline.run_pipeline import run_pipeline
+from fund_pipeline.run_config import read_config
 import test_gbp_publication
 
 
@@ -153,11 +154,12 @@ class PipelineTests(unittest.TestCase):
     def test_config_runs_from_another_folder_and_reuses_same_candidate(self):
         first = self.run_close()
         config = self.config_file()
-        script = Path(__file__).resolve().parents[1] / "run_pipeline.py"
+        script = "fund_pipeline.run_pipeline"
         other_folder = self.f.root / "another_folder"
         other_folder.mkdir()
-        result = subprocess.run([sys.executable, str(script), "--config", str(config)],
-                                cwd=other_folder, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-m", script, "--config", str(config)],
+                                cwd=other_folder, capture_output=True, text=True,
+                                env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(first["candidate_id"], result.stdout)
         self.assertIn("Reused existing candidate", result.stdout)
@@ -183,15 +185,15 @@ class PipelineTests(unittest.TestCase):
 
     def test_config_cannot_be_mixed_with_command_line_dates(self):
         config = self.config_file()
-        script = Path(__file__).resolve().parents[1] / "run_pipeline.py"
-        result = subprocess.run([sys.executable, str(script), "--config", str(config),
+        script = "fund_pipeline.run_pipeline"
+        result = subprocess.run([sys.executable, "-m", script, "--config", str(config),
                                  "--as-of", "2025-01-09"], capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertIn("do not mix", result.stderr)
         self.assertFalse(self.f.db.exists())
 
     def test_cli_success_and_failure_exit_codes(self):
-        command = [sys.executable, str(Path(__file__).resolve().parents[1] / "run_pipeline.py"),
+        command = [sys.executable, "-m", "fund_pipeline.run_pipeline",
                    "--delivery", str(self.f.nav), "--references", str(self.f.usd),
                    "--gbp-references", str(self.f.reference), "--business-date", "2025-01-06",
                    "--as-of", "2025-01-08", "--database", str(self.f.db),

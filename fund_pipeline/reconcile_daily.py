@@ -10,10 +10,10 @@ from pathlib import Path
 import shutil
 import tempfile
 
-from daily_nav import daily_nav
-from landing import land_delivery, verify_delivery
-from publication import check_eligible
-from reconcile import compare_values, read_reference
+from fund_pipeline.daily_nav import daily_nav
+from fund_pipeline.landing import land_delivery, verify_delivery
+from fund_pipeline.publication import check_eligible
+from fund_pipeline.reconcile import compare_values, read_reference
 
 
 def reconcile_daily(database, previous_date, activity, prices, references, business_date, calendar=None):
@@ -98,7 +98,7 @@ def main():
     parser.add_argument("--references", type=Path, required=True)
     parser.add_argument("--demo-apple-12", action="store_true")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parent / "data"
+    root = Path(__file__).resolve().parents[1] / "data"
     references = args.references
     if args.demo_apple_12:
         references = make_mismatch(references, root / "landing", args.business_date)

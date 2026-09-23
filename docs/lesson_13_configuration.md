@@ -6,7 +6,7 @@ data for a run without changing Python code or typing eight command options.
 Run our saved historical example from the project folder:
 
 ```powershell
-python run_pipeline.py --config configs/close_2025-01-08.json
+python -m fund_pipeline.run_pipeline --config configs/close_2025-01-08.json
 ```
 
 Open `configs/close_2025-01-08.json` beside the command. It contains:
@@ -68,6 +68,6 @@ A scheduler could eventually call this command after the day's deliveries arrive
 We have not installed a scheduler or enabled automatic approval. This lesson makes
 the local historical run easier to repeat and inspect.
 
-Read `run_config.py` first: it loads the JSON, checks the settings and resolves
-the paths. Then read `main()` in `run_pipeline.py` to see how those settings are
+Read `fund_pipeline/run_config.py` first: it loads the JSON, checks the settings and resolves
+the paths. Then read `main()` in `fund_pipeline/run_pipeline.py` to see how those settings are
 passed to the same runner we already built.

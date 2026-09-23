@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from landing import land_delivery
-from market_prices import DATES, verify_market
+from fund_pipeline.landing import land_delivery
+from data_extraction.market_prices import DATES, verify_market
 
 
 def write_csv(path, columns, rows):
@@ -81,4 +81,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--market-delivery", required=True, type=Path)
     args = parser.parse_args()
-    print(json.dumps(build_hybrid(args.market_delivery, Path(__file__).resolve().parent / "data"), indent=2))
+    print(json.dumps(build_hybrid(args.market_delivery, Path(__file__).resolve().parents[1] / "data"), indent=2))

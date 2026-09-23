@@ -28,8 +28,8 @@ permitted in this fixture; the code does not establish borrowing availability.
 ## Run it in PowerShell
 
 ```powershell
-$trades = python landing.py --business-date 2026-09-14 --bundle trades
-python build_positions.py --business-date 2026-09-14 --delivery "$trades"
+$trades = python -m fund_pipeline.landing --business-date 2026-09-14 --bundle trades
+python -m fund_pipeline.build_positions --business-date 2026-09-14 --delivery "$trades"
 ```
 
 The `trades` bundle contains `executions.csv` and `allocations.csv`. The landing

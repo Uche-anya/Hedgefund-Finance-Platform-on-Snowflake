@@ -19,12 +19,12 @@ accidental edits or corruption; it does not prove that a price is correct.
 ## Run it in PowerShell
 
 ```powershell
-$delivery = python landing.py --business-date 2026-09-14
+$delivery = python -m fund_pipeline.landing --business-date 2026-09-14
 Get-Content -LiteralPath "$delivery\manifest.json"
-python daily_close.py --business-date 2026-09-14 --delivery "$delivery"
+python -m fund_pipeline.daily_close --business-date 2026-09-14 --delivery "$delivery"
 ```
 
-`$delivery` holds the new directory path printed by `landing.py`.
+`$delivery` holds the new directory path printed by `fund_pipeline/landing.py`.
 The close prints its delivery ID and should still show NAV of GBP 10,090.
 Running the last command again uses the exact same saved delivery.
 
@@ -41,7 +41,7 @@ data/landing/2026-09-14/<delivery ID>/
            |
            | verify date, required files and checksums
            v
-daily_close.py                (calculate one complete snapshot)
+fund_pipeline/daily_close.py                (calculate one complete snapshot)
 ```
 
 ## Walk one file through the code

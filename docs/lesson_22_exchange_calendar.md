@@ -37,7 +37,7 @@ missing, duplicate or malformed rows are rejected.
 ## Run with the calendar
 
 ```powershell
-python run_daily.py --config configs/daily_usd_2025-01-13_exchange_calendar.json
+python -m fund_pipeline.run_daily --config configs/daily_usd_2025-01-13_exchange_calendar.json
 ```
 
 This opt-in example uses the existing published Friday 10 January opening and

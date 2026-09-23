@@ -3,7 +3,7 @@
 We now have a runner for the carry-forward workflow:
 
 ```powershell
-python run_daily.py --config configs/daily_usd_2025-01-09.json
+python -m fund_pipeline.run_daily --config configs/daily_usd_2025-01-09.json
 ```
 
 It loads a published opening, applies the new day's activity, calculates NAV,
@@ -58,13 +58,13 @@ individual controls and whether the candidate was reused.
 | FAILED | Preparation or eligibility failed; inspect the error and controls |
 
 ALREADY_PUBLISHED does not mean that version is still the current version. Use
-`publication.py current` to read the latest published close. The runner neither
+`fund_pipeline/publication.py current` to read the latest published close. The runner neither
 approves nor publishes, including during retries.
 
 Inspect the result with:
 
 ```powershell
-python publication.py --database data/daily_usd_pipeline.sqlite show --candidate YOUR_CANDIDATE_ID
+python -m fund_pipeline.publication --database data/daily_usd_pipeline.sqlite show --candidate YOUR_CANDIDATE_ID
 ```
 
 Malformed configuration returns exit code 2. A failed pipeline returns 1; a
@@ -85,6 +85,6 @@ Run JSON and candidate storage are not one transaction. A killed process may lea
 a RUNNING record even though its candidate was committed. A retry can reuse the
 committed candidate, but automatic repair of the old log is future work.
 
-The earlier `run_pipeline.py` command remains the fixed-batch GBP lesson. This
+The earlier `fund_pipeline/run_pipeline.py` command remains the fixed-batch GBP lesson. This
 daily USD entry point uses `prepare_daily_candidate` and the same review database
 rules, giving us a clear place to add scheduling later.

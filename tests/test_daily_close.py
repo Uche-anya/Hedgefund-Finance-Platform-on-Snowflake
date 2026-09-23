@@ -4,7 +4,7 @@ import unittest
 from decimal import Decimal
 from pathlib import Path
 
-from daily_close import calculate_close
+from fund_pipeline.daily_close import calculate_close
 
 
 class DailyCloseTests(unittest.TestCase):

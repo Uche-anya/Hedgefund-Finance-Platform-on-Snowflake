@@ -11,7 +11,7 @@ Our flow is:
       -> save candidate
       -> check eligibility for review
 
-`run_pipeline.py` calls `publication.prepare`, which already performs the middle
+`fund_pipeline/run_pipeline.py` calls `publication.prepare`, which already performs the middle
 steps using one calculated snapshot. It then inspects the saved candidate. A failed
 comparison remains available for investigation and makes the run fail. It never
 approves or publishes a result.
@@ -21,7 +21,7 @@ approves or publishes a result.
 From the project folder in PowerShell:
 
 ```powershell
-python run_pipeline.py `
+python -m fund_pipeline.run_pipeline `
   --delivery data/landing/2025-01-06/18ae80085f1043789b5d604ee44dc216 `
   --references data/landing/2025-01-08/213ac7b4b9a84e009ae529b887ce0a0c `
   --fx-delivery data/fx/f5a7a63c62c44150b12ebbfdc7a09203 `
@@ -40,7 +40,7 @@ Successful output says `READY_FOR_REVIEW`, gives a run-record path and a candida
 ID. The default candidate database is `data/gbp_pipeline.sqlite`. Inspect it with:
 
 ```powershell
-python publication.py --database data/gbp_pipeline.sqlite show --candidate YOUR_CANDIDATE_ID
+python -m fund_pipeline.publication --database data/gbp_pipeline.sqlite show --candidate YOUR_CANDIDATE_ID
 ```
 
 Approval and publication still follow Part 10 as separate actions.

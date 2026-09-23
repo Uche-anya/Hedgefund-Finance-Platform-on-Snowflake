@@ -37,8 +37,8 @@ and removes the amount owed to us. Tests cover both carried payables and receiva
 ## Run it
 
 ```powershell
-$delivery = python landing.py --business-date 2025-01-09 --bundle daily_cash
-python carry_cash.py --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $delivery
+$delivery = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_cash
+python -m fund_pipeline.carry_cash --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $delivery
 ```
 
 This uses Part 10's existing local demonstration publication. It does not approve

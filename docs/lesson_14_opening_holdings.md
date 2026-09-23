@@ -5,7 +5,7 @@ are the shares left after applying that day's trades.
 
     Closing quantity = opening quantity + today's buys - today's sells
 
-`build_positions.py` calculates the movement from one trade batch starting at
+`fund_pipeline/build_positions.py` calculates the movement from one trade batch starting at
 zero. We now add that movement to yesterday's published holdings.
 
 ## The example
@@ -27,8 +27,8 @@ This arithmetic does not check borrowing permission or broker restrictions.
 ## Run it in PowerShell
 
 ```powershell
-$delivery = python landing.py --business-date 2025-01-09 --bundle trades
-python carry_positions.py --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $delivery
+$delivery = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle trades
+python -m fund_pipeline.carry_positions --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $delivery
 ```
 
 The database is the labelled local demonstration from Part 10, published under
@@ -65,5 +65,5 @@ of later dates after a correction is future work.
 - The existing USD/GBP runner is unchanged. This is a separate small step toward
   extending it to daily activity.
 
-Read `carry_positions.py`: load a published opening, validate the new delivery,
+Read `fund_pipeline/carry_positions.py`: load a published opening, validate the new delivery,
 calculate today's movement, then add the two quantities by portfolio and instrument.

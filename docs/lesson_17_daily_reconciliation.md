@@ -24,10 +24,10 @@ SIM-D2-E001 and is due on 10 January. Cash and NAV follow the Part 16 hand arith
 ## Run the checks
 
 ```powershell
-$activity = python landing.py --business-date 2025-01-09 --bundle daily_cash
-$prices = python landing.py --business-date 2025-01-09 --bundle daily_prices
-$references = python landing.py --business-date 2025-01-09 --bundle daily_references
-python reconcile_daily.py --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices --references $references
+$activity = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_cash
+$prices = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_prices
+$references = python -m fund_pipeline.landing --business-date 2025-01-09 --bundle daily_references
+python -m fund_pipeline.reconcile_daily --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices --references $references
 ```
 
 This requires the published opening demonstration from Part 10. Seven comparisons
@@ -42,7 +42,7 @@ The NAV is calculated once and that checked snapshot stays in the report.
 ## Deliberately make the broker disagree
 
 ```powershell
-python reconcile_daily.py --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices --references $references --demo-apple-12
+python -m fund_pipeline.reconcile_daily --database data/gbp_publication_demo.sqlite --previous-date 2025-01-08 --business-date 2025-01-09 --delivery $activity --prices $prices --references $references --demo-apple-12
 ```
 
 This makes a new, explicitly labelled reference delivery where the broker says

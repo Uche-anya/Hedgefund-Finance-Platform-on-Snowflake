@@ -2,9 +2,9 @@ from decimal import Decimal
 from pathlib import Path
 import unittest
 
-from carry_positions import carry_positions
-from landing import land_delivery
-from publication import approve, publish
+from fund_pipeline.carry_positions import carry_positions
+from fund_pipeline.landing import land_delivery
+from fund_pipeline.publication import approve, publish
 import test_gbp_publication
 
 

@@ -8,8 +8,8 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
-from landing import land_delivery, verify_delivery
-from reconcile import reconcile, make_demo_delivery
+from fund_pipeline.landing import land_delivery, verify_delivery
+from fund_pipeline.reconcile import reconcile, make_demo_delivery
 
 
 class ReconciliationTests(unittest.TestCase):
@@ -82,7 +82,7 @@ class ReconciliationTests(unittest.TestCase):
     def test_duplicate_internal_position_is_rejected(self):
         nav, refs = self.deliveries()
         duplicate = {"portfolio": "GROWTH", "instrument": "ALPHA", "quantity": Decimal("70")}
-        with patch("reconcile.calculate_nav", return_value={"holdings": [duplicate, duplicate]}):
+        with patch("fund_pipeline.reconcile.calculate_nav", return_value={"holdings": [duplicate, duplicate]}):
             with self.assertRaisesRegex(ValueError, "Duplicate internal position"):
                 reconcile(nav, refs, "2026-09-14", "2026-09-16")
 
@@ -137,15 +137,14 @@ class ReconciliationTests(unittest.TestCase):
 
     def test_cli_saves_report_and_returns_failure_for_demo(self):
         # Run a copied entry point so generated evidence stays in the temporary directory.
-        shutil.copyfile(self.repo / "reconcile.py", self.root / "reconcile.py")
-        for name in ("fund_nav.py", "cash_settlement.py", "build_positions.py", "daily_close.py", "landing.py"):
-            shutil.copyfile(self.repo / name, self.root / name)
+        shutil.copytree(self.repo / "fund_pipeline", self.root / "fund_pipeline",
+                        ignore=shutil.ignore_patterns("__pycache__"))
         nav, refs = self.deliveries()
-        command = [sys.executable, str(self.root / "reconcile.py"), "--business-date", "2026-09-14",
+        command = [sys.executable, "-m", "fund_pipeline.reconcile", "--business-date", "2026-09-14",
                    "--as-of", "2026-09-16", "--delivery", str(nav), "--references", str(refs)]
-        passed = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        passed = subprocess.run(command, cwd=self.root, capture_output=True, text=True, timeout=30)
         self.assertEqual(passed.returncode, 0, passed.stderr)
-        failed = subprocess.run(command + ["--demo-alpha-69"], capture_output=True, text=True, timeout=30)
+        failed = subprocess.run(command + ["--demo-alpha-69"], cwd=self.root, capture_output=True, text=True, timeout=30)
         self.assertEqual(failed.returncode, 1, failed.stderr)
         self.assertIn("difference=1 shares", failed.stdout)
         reports = [json.loads(path.read_text()) for path in (self.root / "data" / "reconciliation").glob("*.json")]

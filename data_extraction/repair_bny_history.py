@@ -12,11 +12,11 @@ from pathlib import Path
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from check_bny_identity import CHECKS, read_identity
-from historical_prices import fetch, inspect_bars, write_json
+from data_extraction.check_bny_identity import CHECKS, read_identity
+from data_extraction.historical_prices import fetch, inspect_bars, write_json
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "data/historical_prices/a7f9a9e28bf3430c97e6a776bcdafba9"
 REFERENCES = ROOT / "data/reference_checks/231d755172174a4b877e1818bae14383"
 CHANGE_DATE = "2026-05-21"

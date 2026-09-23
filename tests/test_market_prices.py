@@ -6,12 +6,12 @@ import unittest
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
 
-from build_hybrid import build_hybrid
-from fund_nav import calculate_nav
-from market_prices import DATES, download, fetch, normalize, verify_market
-from publication import prepare
-from reconcile import reconcile
-from landing import land_delivery
+from fund_pipeline.build_hybrid import build_hybrid
+from fund_pipeline.fund_nav import calculate_nav
+from data_extraction.market_prices import DATES, download, fetch, normalize, verify_market
+from fund_pipeline.publication import prepare
+from fund_pipeline.reconcile import reconcile
+from fund_pipeline.landing import land_delivery
 
 
 def synthetic_response(closes):
@@ -30,7 +30,7 @@ class MarketPriceTests(unittest.TestCase):
         self.amazon = synthetic_response([200, 198, 197])
 
     def downloaded(self):
-        with patch("market_prices.fetch", side_effect=[self.apple, self.amazon]):
+        with patch("data_extraction.market_prices.fetch", side_effect=[self.apple, self.amazon]):
             return download(self.root / "market")
 
     def test_raw_responses_are_preserved_and_close_not_adjusted_close_is_used(self):
@@ -72,7 +72,7 @@ class MarketPriceTests(unittest.TestCase):
                 verify_market(folder)
 
     def test_failed_second_response_keeps_raw_evidence_without_manifest(self):
-        with patch("market_prices.fetch", side_effect=[self.apple, b'{"error":"unavailable"}']):
+        with patch("data_extraction.market_prices.fetch", side_effect=[self.apple, b'{"error":"unavailable"}']):
             with self.assertRaisesRegex(RuntimeError, "incomplete"):
                 download(self.root / "market")
         folder = next((self.root / "market").iterdir())
@@ -84,16 +84,16 @@ class MarketPriceTests(unittest.TestCase):
     def test_transient_errors_retry_and_permanent_http_errors_do_not(self):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = self.apple
-        with patch("market_prices.time.sleep"), patch("market_prices.urlopen", side_effect=[
+        with patch("data_extraction.market_prices.time.sleep"), patch("data_extraction.market_prices.urlopen", side_effect=[
             HTTPError("demo", 429, "rate limited", {}, None), URLError("timeout"), response
         ]) as request:
             self.assertEqual(fetch("https://example.invalid"), self.apple)
             self.assertEqual(request.call_count, 3)
-        with patch("market_prices.time.sleep"), patch("market_prices.urlopen", side_effect=URLError("down")) as request:
+        with patch("data_extraction.market_prices.time.sleep"), patch("data_extraction.market_prices.urlopen", side_effect=URLError("down")) as request:
             with self.assertRaises(URLError):
                 fetch("https://example.invalid")
             self.assertEqual(request.call_count, 3)
-        with patch("market_prices.urlopen", side_effect=HTTPError("demo", 401, "denied", {}, None)) as request:
+        with patch("data_extraction.market_prices.urlopen", side_effect=HTTPError("demo", 401, "denied", {}, None)) as request:
             with self.assertRaises(HTTPError):
                 fetch("https://example.invalid")
             self.assertEqual(request.call_count, 1)

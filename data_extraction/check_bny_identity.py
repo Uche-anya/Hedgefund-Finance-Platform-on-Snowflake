@@ -104,7 +104,7 @@ def main():
     key = os.environ.get("MASSIVE_API_KEY")
     if not key:
         key = getpass("Massive API key (hidden): ")
-    root = Path(__file__).resolve().parent / "data" / "reference_checks"
+    root = Path(__file__).resolve().parents[1] / "data" / "reference_checks"
     try:
         check_identities(root, key)
     except (ValueError, RuntimeError) as error:

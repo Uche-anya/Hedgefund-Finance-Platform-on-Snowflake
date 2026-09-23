@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from landing import verify_delivery
+from fund_pipeline.landing import verify_delivery
 
 
 def read_events(path, columns, key, business_date):

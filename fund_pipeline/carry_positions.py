@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from build_positions import build_positions
-from business_calendar import calendar_policy, validate_close_dates
-from landing import verify_delivery
-from publication import current, now
+from fund_pipeline.build_positions import build_positions
+from fund_pipeline.business_calendar import calendar_policy, validate_close_dates
+from fund_pipeline.landing import verify_delivery
+from fund_pipeline.publication import current, now
 
 
 def carry_positions(database, previous_date, trade_folder, business_date, calendar=None):
@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--delivery", type=Path, required=True)
     args = parser.parse_args()
     report = carry_positions(args.database, args.previous_date, args.delivery, args.business_date)
-    folder = Path(__file__).resolve().parent / "data" / "positions"
+    folder = Path(__file__).resolve().parents[1] / "data" / "positions"
     folder.mkdir(parents=True, exist_ok=True)
     output = folder / f"{report['run_id']}.json"
     temporary = output.with_suffix(".tmp")

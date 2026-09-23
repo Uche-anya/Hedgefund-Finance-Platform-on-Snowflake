@@ -5,13 +5,13 @@ import unittest
 from unittest.mock import patch
 from datetime import datetime
 
-from simulator import create_execution, produce_trades, save_event, validate_execution
+from simulation.simulator import create_execution, produce_trades, save_event, validate_execution
 
 
 class SimulatorTests(unittest.TestCase):
     def test_producer_saves_five_distinct_trades_with_four_pauses(self):
         with tempfile.TemporaryDirectory() as folder:
-            with patch("simulator.time.sleep") as sleep, patch("builtins.print"):
+            with patch("simulation.simulator.time.sleep") as sleep, patch("builtins.print"):
                 produce_trades(Path(folder))
             events = [json.loads(path.read_text()) for path in Path(folder).glob("*.jsonl")]
             events.sort(key=lambda event: event["executed_at"])

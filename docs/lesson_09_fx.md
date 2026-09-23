@@ -52,7 +52,7 @@ different production valuation cut-off would require separate design.
 Download the FX data once:
 
 ```powershell
-$fx = python fx_rates.py
+$fx = python -m data_extraction.fx_rates
 ```
 
 Then use a saved USD NAV delivery from Part 8. For the delivery already created
@@ -60,12 +60,12 @@ in this workspace:
 
 ```powershell
 $navDelivery = 'data/landing/2025-01-06/18ae80085f1043789b5d604ee44dc216'
-python report_gbp.py --business-date 2025-01-06 --as-of 2025-01-08 --delivery "$navDelivery" --fx-delivery "$fx"
+python -m fund_pipeline.report_gbp --business-date 2025-01-06 --as-of 2025-01-08 --delivery "$navDelivery" --fx-delivery "$fx"
 ```
 
 If rebuilding from scratch, use `$scenario.nav_delivery` from the Part 8 commands
 instead of that existing path. Reuse the `$fx` folder to replay without another
-network request. Only `fx_rates.py` needs internet access.
+network request. Only `data_extraction/fx_rates.py` needs internet access.
 
 The report prints USD and GBP columns for cash, receivables, payables, long
 assets, short obligations and NAV. It saves a JSON snapshot under

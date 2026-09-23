@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from check_bny_identity import CHECKS, check_identities, read_identity
+from data_extraction.check_bny_identity import CHECKS, check_identities, read_identity
 
 
 def response(ticker):
@@ -18,8 +18,8 @@ def response(ticker):
 class IdentityTests(unittest.TestCase):
     def test_saves_all_dated_responses_and_preserves_missing_ids(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("check_bny_identity.fetch_details", side_effect=[response(t) for t, d in CHECKS]) as fetch, \
-                    patch("check_bny_identity.time.sleep"), patch("builtins.print"):
+            with patch("data_extraction.check_bny_identity.fetch_details", side_effect=[response(t) for t, d in CHECKS]) as fetch, \
+                    patch("data_extraction.check_bny_identity.time.sleep"), patch("builtins.print"):
                 folder = check_identities(Path(temp), "test-secret")
             self.assertEqual([call.args[:2] for call in fetch.call_args_list], list(CHECKS))
             with (folder / "identities.csv").open(newline="") as file:
@@ -36,7 +36,7 @@ class IdentityTests(unittest.TestCase):
 
     def test_failed_request_does_not_create_completion_manifest(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("check_bny_identity.fetch_details", side_effect=RuntimeError("HTTP 403")), \
+            with patch("data_extraction.check_bny_identity.fetch_details", side_effect=RuntimeError("HTTP 403")), \
                     patch("builtins.print"), self.assertRaises(RuntimeError):
                 check_identities(Path(temp), "test-secret")
             self.assertEqual(list(Path(temp).glob("*/manifest.json")), [])

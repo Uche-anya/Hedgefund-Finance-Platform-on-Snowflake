@@ -57,10 +57,10 @@ mixing currency scenarios in one publication database.
 ## Download, build, and run in PowerShell
 
 ```powershell
-$market = python market_prices.py
-$scenario = python build_hybrid.py --market-delivery "$market" | ConvertFrom-Json
-python fund_nav.py --business-date 2025-01-06 --as-of 2025-01-08 --currency USD --delivery "$($scenario.nav_delivery)"
-python reconcile.py --business-date 2025-01-06 --as-of 2025-01-08 --currency USD --delivery "$($scenario.nav_delivery)" --references "$($scenario.reference_delivery)"
+$market = python -m data_extraction.market_prices
+$scenario = python -m fund_pipeline.build_hybrid --market-delivery "$market" | ConvertFrom-Json
+python -m fund_pipeline.fund_nav --business-date 2025-01-06 --as-of 2025-01-08 --currency USD --delivery "$($scenario.nav_delivery)"
+python -m fund_pipeline.reconcile --business-date 2025-01-06 --as-of 2025-01-08 --currency USD --delivery "$($scenario.nav_delivery)" --references "$($scenario.reference_delivery)"
 ```
 
 Only the first command needs the internet. `$market` stores the saved response
@@ -71,8 +71,8 @@ from). Results remain NOT APPROVED.
 To prepare a candidate for local review, with its own USD database:
 
 ```powershell
-$candidate = python publication.py --database data/hybrid_publication.sqlite prepare --business-date 2025-01-06 --as-of 2025-01-08 --currency USD --delivery "$($scenario.nav_delivery)" --references "$($scenario.reference_delivery)"
-python publication.py --database data/hybrid_publication.sqlite show --candidate "$candidate"
+$candidate = python -m fund_pipeline.publication --database data/hybrid_publication.sqlite prepare --business-date 2025-01-06 --as-of 2025-01-08 --currency USD --delivery "$($scenario.nav_delivery)" --references "$($scenario.reference_delivery)"
+python -m fund_pipeline.publication --database data/hybrid_publication.sqlite show --candidate "$candidate"
 ```
 
 This saves a candidate; it does not approve or publish it. The Part 7 review

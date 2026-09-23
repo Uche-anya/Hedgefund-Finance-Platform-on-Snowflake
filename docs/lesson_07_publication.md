@@ -18,7 +18,7 @@ security boundary; real authorisation is not implemented.
 
 ## Storage, without a new service
 
-`publication.py` uses SQLite, a database built into Python, stored by default
+`fund_pipeline/publication.py` uses SQLite, a database built into Python, stored by default
 at `data/publication.sqlite`. No database server or dependency installation is
 needed. This local choice does not replace the planned Snowflake architecture.
 
@@ -42,10 +42,10 @@ An administrator able to change the database schema can bypass that protection.
 ### 1. Save inputs and prepare a candidate
 
 ```powershell
-$navDelivery = python landing.py --business-date 2026-09-14 --bundle nav
-$referenceDelivery = python landing.py --business-date 2026-09-16 --bundle references
-$candidate = python publication.py prepare --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery" --references "$referenceDelivery"
-python publication.py show --candidate "$candidate"
+$navDelivery = python -m fund_pipeline.landing --business-date 2026-09-14 --bundle nav
+$referenceDelivery = python -m fund_pipeline.landing --business-date 2026-09-16 --bundle references
+$candidate = python -m fund_pipeline.publication prepare --business-date 2026-09-14 --as-of 2026-09-16 --delivery "$navDelivery" --references "$referenceDelivery"
+python -m fund_pipeline.publication show --candidate "$candidate"
 ```
 
 The candidate is saved even if reconciliation fails, so its failed checks can
@@ -58,7 +58,7 @@ Check `current_version`: 0 means there is no published result for that date.
 After inspecting the saved candidate, use your chosen local reviewer label:
 
 ```powershell
-python publication.py approve --candidate "$candidate" --by "your-name" --note "Reviewed synthetic holdings, cash, NAV and all four comparisons" --expected-version 0
+python -m fund_pipeline.publication approve --candidate "$candidate" --by "your-name" --note "Reviewed synthetic holdings, cash, NAV and all four comparisons" --expected-version 0
 ```
 
 The example uses 0 for the first publication. For a later reviewed candidate,
@@ -71,8 +71,8 @@ or note also fails. Passing comparisons alone never creates an approval.
 ### 3. Publish and read the consumer result
 
 ```powershell
-python publication.py publish --candidate "$candidate"
-python publication.py current --as-of 2026-09-16
+python -m fund_pipeline.publication publish --candidate "$candidate"
+python -m fund_pipeline.publication current --as-of 2026-09-16
 ```
 
 The result includes the full close, reviewer record, version and publication

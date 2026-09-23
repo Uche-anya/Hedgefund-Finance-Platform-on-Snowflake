@@ -211,7 +211,7 @@ TESTED: `python -m unittest discover -s tests -q` ran 94 tests, all passing.
 Six runner tests cover saved evidence and unapproved output, distinct reruns,
 missing FX, failed financial checks, invalid dates and CLI exit codes.
 
-EXECUTED: `run_pipeline.py` completed the saved historical USD/GBP scenario.
+EXECUTED: `fund_pipeline/run_pipeline.py` completed the saved historical USD/GBP scenario.
 Run `ce2096600f764bb4b78156a4859f2020` is READY_FOR_REVIEW; candidate
 `bd73e1eaf7f1424f9c5e3cb51d27693b` is in `data/gbp_pipeline.sqlite`.
 No approval or publication was performed by the runner.
@@ -250,7 +250,7 @@ Configuration tests cover execution from a different working folder, reuse of
 the same candidate, saved configuration evidence, invalid/duplicate/unknown fields
 and rejection of mixed configuration and command-line settings.
 
-EXECUTED: `python run_pipeline.py --config configs/close_2025-01-08.json` produced
+EXECUTED: `python -m fund_pipeline.run_pipeline --config configs/close_2025-01-08.json` produced
 run `6a31320449804b4ea7d0d5829ea3681a`, READY_FOR_REVIEW, reusing candidate
 `bbafbe134c62433db396a4802c6e34f2` in `data/gbp_pipeline.sqlite`.
 No new approval or publication was made. The run record preserves the configuration
@@ -265,7 +265,7 @@ Six new cases cover next-day buys/short covering and replay, no-trade carry-forw
 sales through zero, new positions, duplicate events, incomplete allocations,
 unpublished openings and skipped dates.
 
-EXECUTED: `carry_positions.py` read the published 2025-01-08 demonstration close
+EXECUTED: `fund_pipeline/carry_positions.py` read the published 2025-01-08 demonstration close
 and newly landed synthetic 2025-01-09 trades. Closing quantities are 13 AAPL.US
 in GROWTH and -3 AMZN.US in HEDGE. Report:
 `data/positions/e999512e108849a2892603bf65481033.json`.
@@ -295,7 +295,7 @@ TESTED: `python -m unittest discover -s tests -q` ran 121 tests, all passing.
 Four new tests cover hand-calculated NAV and replay, settlement neutrality,
 short-price sensitivity, and missing/stale/duplicate/invalid/wrong-currency prices.
 
-EXECUTED: `daily_nav.py` combined the published 2025-01-08 opening with synthetic
+EXECUTED: `fund_pipeline/daily_nav.py` combined the published 2025-01-08 opening with synthetic
 2025-01-09 activity and clearly labelled teaching prices. The result matched the
 hand calculation. Report:
 `data/daily_nav/e43c2c54317045138c580a1a40c2c960.json`.
@@ -346,7 +346,7 @@ Seven new cases cover retry reuse and separate run records, a republished openin
 failed comparisons/missing inputs, overlapping attempts, changed financial code,
 already-published candidates and configuration/CLI execution from another folder.
 
-EXECUTED: `python run_daily.py --config configs/daily_usd_2025-01-09.json` ran twice.
+EXECUTED: `python -m fund_pipeline.run_daily --config configs/daily_usd_2025-01-09.json` ran twice.
 Run `8c81974f97e14079b1f6a7c8444b4333` created candidate
 `d86a96b8a221448b96f5ea579b9021a8`; run `f757f297b76b4be0b5e48f4a9d568a98` reused it.
 Both reached READY_FOR_REVIEW in `data/daily_usd_pipeline.sqlite` without approving
@@ -360,7 +360,7 @@ invalidation and new-day GBP translation remain pending. See
 
 ## Part 20 evidence
 
-EXECUTED: `python run_daily.py --config configs/daily_usd_2025-01-10.json` produced
+EXECUTED: `python -m fund_pipeline.run_daily --config configs/daily_usd_2025-01-10.json` produced
 run `b8ee62d0df4a44ceb02607c25c36270a` and candidate
 `8b6b95dd57f7487994e23cd588005c3b`, READY_FOR_REVIEW.
 It uses 9 January published candidate `9f7224b4648c48e0ad0e40dba1e18d2d` as opening.
