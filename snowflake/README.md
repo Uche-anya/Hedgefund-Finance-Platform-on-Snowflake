@@ -141,3 +141,7 @@ row details and load retry behavior have not yet been independently verified.
 The first dbt project is prepared in `../dbt`; see [its run guide](../dbt/README.md).
 Offline parsing and dependency checks passed. Run `06_dbt_access.sql` manually
 before connecting dbt. Its role grants and live dbt execution remain pending.
+# Assembled historical prices
+
+For the 503-ticker dataset, start with [the historical price setup](HISTORICAL_PRICES.md)
+and `12_historical_prices.sql`. This prepares storage; loading is a separate step.
