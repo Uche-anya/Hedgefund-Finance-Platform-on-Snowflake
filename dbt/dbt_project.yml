@@ -10,6 +10,7 @@ on-run-start:
 flags:
   send_anonymous_usage_stats: false
 vars:
+  historical_price_delivery_id: 'fb25ddd9838840488e4c8b971ff7e0ae'
   price_delivery_id: '0a35a13d137e4627ace8d7a9d668f3ce'
   delivery_id: '18ae80085f1043789b5d604ee44dc216'
   business_date: '2025-01-06'

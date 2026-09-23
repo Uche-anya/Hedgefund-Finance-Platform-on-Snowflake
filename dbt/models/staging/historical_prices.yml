@@ -1,0 +1,55 @@
+version: 2
+models:
+  - name: stg_historical_prices
+    description: Typed unadjusted daily bars for the selected delivery. Universe ticker is a snapshot label, not a verified permanent security ID.
+    columns:
+      - name: valuation_date
+        data_tests: [not_null]
+      - name: universe_ticker
+        data_tests: [not_null]
+      - name: source_ticker
+        data_tests: [not_null]
+      - name: open_price
+        data_tests: [not_null]
+      - name: high_price
+        data_tests: [not_null]
+      - name: low_price
+        data_tests: [not_null]
+      - name: close_price
+        data_tests: [not_null]
+      - name: volume
+        data_tests: [not_null]
+      - name: input_file
+        data_tests: [not_null]
+      - name: input_row_number
+        data_tests: [not_null]
+      - name: source_file
+        data_tests: [not_null]
+      - name: source_row_number
+        data_tests: [not_null]
+      - name: loaded_at
+        data_tests: [not_null]
+      - name: currency
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['USD']
+      - name: price_basis
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['unadjusted']
+      - name: source_system
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['massive']
+      - name: identity_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['reviewed_ticker_transition', 'provider_ticker_only']

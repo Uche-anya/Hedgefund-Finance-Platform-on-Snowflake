@@ -4,6 +4,9 @@ sources:
     database: NORTHBRIDGE_DEV
     schema: RAW
     tables:
+      - name: historical_prices
+        identifier: HISTORICAL_PRICES
+        description: Assembled Massive daily bars with reviewed repairs and load provenance.
       - name: closing_prices
         identifier: CLOSING_PRICES
         description: Saved EODHD closing prices with file and delivery metadata.

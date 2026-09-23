@@ -4,19 +4,22 @@
 
 The Snowflake development build now loads simulated trades and saved real
 closing prices, derives portfolio holdings, and values those holdings in USD.
-The latest user-run dbt build passed: 5 models, 40 data tests, and 1 startup hook.
-The local Python tools pass 169 tests.
+The earlier five-model dbt build passed 40 data tests. The historical-price
+staging view has also been built in Snowflake and passed its 25 data tests.
 
 The local simulator produces five validated fictional trade events. A separate
-Massive download contains 247,958 daily records across 503 tickers. BNY and Block
-have separate 500-row repairs for historical ticker changes; those repairs and
-the larger price dataset are not yet integrated into Snowflake.
+Massive download contains 247,958 daily records across 503 tickers. Applying eight
+reviewed history repairs produces an assembled dataset of 250,036 rows. It is
+loaded into RAW.HISTORICAL_PRICES and typed by dbt's stg_historical_prices view.
 
 - [Snowflake setup and ingestion](snowflake/README.md)
 - [dbt setup](dbt/README.md) and [key authentication](dbt/KEY_AUTH.md)
 - [Position valuation](dbt/VALUATION.md)
 - [Simulator: produce five fictional trade events](docs/simulator.md)
 - [Historical price downloads and resume instructions](docs/historical_prices.md)
+- [Massive extraction scripts and commands](data_extraction/README.md)
+- [Assembled historical prices](docs/assembled_prices.md)
+- [Historical price staging](dbt/HISTORICAL_PRICES.md)
 - [BNY identity checks and repair](docs/bny_identity.md)
 - [Review of the remaining short histories](docs/coverage_review.md)
 
@@ -25,6 +28,30 @@ covers first-day holdings and position values; cash, settlement and NAV logic
 below describe the earlier Python prototype. Airflow and ML are not implemented.
 Fixtures are fictional. Downloaded market data and private keys stay outside Git.
 The numbered lessons and pre-trial checklist preserve the earlier learning work.
+
+## Code folders
+
+| Folder | Purpose |
+| --- | --- |
+| data_extraction/ | Massive downloads, identity checks, repairs and assembly; earlier market and FX downloaders |
+| simulation/ | Fictional trade-event producer |
+| fund_pipeline/ | Earlier Python holdings, cash, NAV, reconciliation and daily runners |
+| scripts/ | Local dbt connection and key setup |
+| dbt/ | Snowflake transformations and data tests |
+| snowflake/ | Database setup and ingestion SQL |
+| tests/ | Python tests |
+
+Run Python modules from the project root, for example:
+
+```powershell
+python -m simulation.simulator
+python -m data_extraction.assemble_prices
+python -m fund_pipeline.run_daily --help
+```
+
+Existing data, fixtures, configuration and calendars retain their locations.
+Saved historical manifests retain their original code fingerprints; new runs
+record the reorganised source paths and hashes.
 
 ## Earlier Python prototype
 
@@ -76,7 +103,7 @@ With no trades, fees or investor flows today, closing NAV is GBP 10,090.
 From this folder, using Python 3.12 (no dependencies to install yet):
 
 ```powershell
-python daily_close.py --business-date 2026-09-14
+python -m fund_pipeline.daily_close --business-date 2026-09-14
 python -m unittest discover -s tests -v
 ```
 
@@ -153,7 +180,7 @@ obligations forward, applying settlement confirmations once.
 [Part 14: opening holdings](docs/lesson_14_opening_holdings.md) carries a published
 day's share quantities into the next day's simulated trades.
 [Part 13: run configuration](docs/lesson_13_configuration.md) shortens the saved
-historical run to `python run_pipeline.py --config configs/close_2025-01-08.json`.
+historical run to `python -m fund_pipeline.run_pipeline --config configs/close_2025-01-08.json`.
 [Part 12: safe reruns](docs/lesson_12_reruns.md) reuses successful candidates for
 unchanged dates, saved deliveries and calculation code while logging each attempt.
 Use [Part 11: one pipeline command](docs/lesson_11_pipeline.md) to run the saved
