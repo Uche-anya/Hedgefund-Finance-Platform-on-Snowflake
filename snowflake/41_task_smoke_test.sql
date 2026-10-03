@@ -1,0 +1,4 @@
+-- Enable only the child and start one manual graph run. The scheduled root stays suspended.
+USE ROLE SYSADMIN;
+ALTER TASK NORTHBRIDGE_DEV.OPERATIONS.DAILY_CLOSE_AUDIT RESUME;
+EXECUTE TASK NORTHBRIDGE_DEV.OPERATIONS.DAILY_CLOSE;

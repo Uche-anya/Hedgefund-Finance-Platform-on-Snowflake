@@ -1,0 +1,12 @@
+northbridge:
+  target: prod
+  outputs:
+    prod:
+      type: snowflake
+      account: not_needed
+      user: not_needed
+      role: NORTHBRIDGE_DBT_DEV
+      database: NORTHBRIDGE_DEV
+      schema: DBT_DEV
+      warehouse: COMPUTE_WH
+      threads: 4

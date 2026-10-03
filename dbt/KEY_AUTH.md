@@ -45,8 +45,8 @@ vault and passes it through a DBT_ENV_SECRET child-process variable, masked by d
 It does not save the secret in `.env` or a project configuration file.
 
 Applications running under your Windows identity can use the stored credential.
-This is local secret storage, not a production secret manager. Airflow on another
-host needs separately provisioned credentials. Key rotation is still future work.
+This is local secret storage, not a production secret manager. Production service
+identities need separately provisioned credentials. Key rotation is still future work.
 An administrator can revoke this login with:
 
 ```sql

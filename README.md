@@ -2,10 +2,15 @@
 
 ## Current status
 
-The Snowflake development build now loads simulated trades and saved real
-closing prices, derives portfolio holdings, and values those holdings in USD.
-The earlier five-model dbt build passed 40 data tests. The historical-price
-staging view has also been built in Snowflake and passed its 25 data tests.
+The Snowflake development build carries simulated holdings across 23 market
+days, values them using real closing prices, tracks settlement confirmations,
+applies investor flows and expenses, and calculates cash and a simplified USD
+NAV for two accounts. ECB rates provide EUR/GBP reporting views, Treasury rates
+provide a non-accounting cash benchmark, and a simulated bank feed checks cash.
+
+The larger replay contains 3,200 trades across 20 stocks, including missing and
+late confirmations and a day without trades. The replay also includes a fictional Mastercard dividend receipt. A separate Python
+calculation checks all 920 position valuations and 46 account-day balances.
 
 The local simulator produces five validated fictional trade events. A separate
 Massive download contains 247,958 daily records across 503 tickers. Applying eight
@@ -13,6 +18,13 @@ reviewed history repairs produces an assembled dataset of 250,036 rows. It is
 loaded into RAW.HISTORICAL_PRICES and typed by dbt's stg_historical_prices view.
 
 - [Snowflake setup and ingestion](snowflake/README.md)
+- [Multi-day replay: models, assumptions and one-command run](docs/multi_day_replay.md)
+- [Active dbt model inventory and archived lessons](dbt/MODEL_INVENTORY.md)
+- [Settlement lesson runner](docs/run_settlement_lesson.md)
+- [Remaining work](docs/ROADMAP.md)
+- [Production gap audit and build order](docs/PROJECT_AUDIT.md)
+- [Snowflake governance model](docs/snowflake_governance.md)
+- [Daily production operation and evidence](docs/daily_operations.md)
 - [dbt setup](dbt/README.md) and [key authentication](dbt/KEY_AUTH.md)
 - [Position valuation](dbt/VALUATION.md)
 - [Simulator: produce five fictional trade events](docs/simulator.md)
@@ -23,9 +35,14 @@ loaded into RAW.HISTORICAL_PRICES and typed by dbt's stg_historical_prices view.
 - [BNY identity checks and repair](docs/bny_identity.md)
 - [Review of the remaining short histories](docs/coverage_review.md)
 
-This is a learning project, not a deployed daily service. Snowflake currently
-covers first-day holdings and position values; cash, settlement and NAV logic
-below describe the earlier Python prototype. Airflow and ML are not implemented.
+This is a learning project with a working production-style close, rather than a
+live fund service. The current Snowflake
+NAV includes the reviewed Mastercard dividend, investor flows and administrator
+expenses. Borrow costs, margin and unapproved corporate actions remain excluded.
+See [the final source integrations](docs/final_sources.md).
+The lessons below also document the earlier Python prototype. A suspended
+Snowflake task graph and native dbt project are implemented; its account-level
+execution privilege must be approved before the task smoke test and schedule.
 Fixtures are fictional. Downloaded market data and private keys stay outside Git.
 The numbered lessons and pre-trial checklist preserve the earlier learning work.
 
@@ -154,7 +171,7 @@ money when that share price rises. Restore GBP 18 before running the tests.
    separate review records and preserves each published version in SQLite.
 5. Prepare and validate the local model and cloud design, then review readiness.
 6. After explicit cloud authorisation, load Snowflake, transform with dbt,
-   and schedule daily runs with Airflow.
+   and schedule daily runs with a Snowflake task graph.
 7. Add a daily dashboard and evaluate unusual-trading-activity detection.
    Start with simple rules, then compare Isolation Forest using earlier dates
    for training and later dates for evaluation. Synthetic results will be

@@ -11,11 +11,13 @@ from dbt_key import KEY_PATH, USER, unlock_secret
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['debug', 'build'], default='debug', nargs='?')
+    parser.add_argument('command', choices=['debug', 'parse', 'build'], default='debug', nargs='?')
     parser.add_argument('--select', help='Optional dbt model selector, for example stg_executions')
+    parser.add_argument('--exclude', help='Optional dbt exclusion, for example tag:fixture')
+    parser.add_argument('--vars', help='dbt variables as a YAML or JSON string')
     args = parser.parse_args()
-    if args.select and args.command != 'build':
-        parser.error('--select is only supported with build')
+    if (args.select or args.exclude) and args.command != 'build':
+        parser.error('--select and --exclude are only supported with build')
 
     root = Path(__file__).resolve().parent.parent
     executable = root / '.venv' / 'dbt' / 'Scripts' / 'dbt.exe'
@@ -39,6 +41,10 @@ def main():
         if args.select:
             # Tests requiring unselected models wait for the full project build.
             command.extend(['--select', args.select, '--indirect-selection', 'cautious'])
+        if args.exclude:
+            command.extend(['--exclude', args.exclude])
+        if args.vars:
+            command.extend(['--vars', args.vars])
     print('Connecting with the dedicated dbt key.')
     try:
         return subprocess.run(command, cwd=root, env=environment).returncode
