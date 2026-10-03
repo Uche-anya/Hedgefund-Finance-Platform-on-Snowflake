@@ -1,0 +1,63 @@
+version: 2
+models:
+  - name: stg_oms_executions
+    description: Execution messages for one simulated delivery. One row per received message; no correction handling or holdings calculation yet.
+    columns:
+      - name: event_id
+        data_tests: [not_null, unique]
+      - name: execution_id
+        data_tests: [not_null]
+      - name: business_date
+        data_tests: [not_null]
+      - name: settlement_due
+        data_tests: [not_null]
+      - name: executed_at
+        data_tests: [not_null]
+      - name: published_at
+        data_tests: [not_null]
+      - name: quantity
+        data_tests: [not_null]
+      - name: execution_price
+        data_tests: [not_null]
+      - name: side
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['BUY', 'SELL']
+      - name: currency
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['USD']
+      - name: event_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['EXECUTION_REPORTED']
+      - name: execution_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ACTIVE']
+      - name: execution_version
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1']
+      - name: schema_version
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1']
+      - name: is_simulated
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['true']

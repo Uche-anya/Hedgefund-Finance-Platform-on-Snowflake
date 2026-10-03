@@ -1,5 +1,3 @@
--- Keep all dates in this price delivery. Valuation will choose the holdings date.
--- Remove exact repeats; conflicting prices remain so the duplicate test fails.
 with received as (
     select distinct
         valuation_date as valuation_date_raw,

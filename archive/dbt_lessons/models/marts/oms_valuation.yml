@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: oms_first_day_valuation
+    description: Signed market value of the fixed simulated account positions using same-day Massive unadjusted closing prices. Excludes cash, fees and other balances; not fund NAV or profit.
+    columns:
+      - name: close_price
+        data_tests: [not_null]
+      - name: market_value
+        data_tests: [not_null]
+      - name: price_delivery_id
+        data_tests: [not_null]
+      - name: price_source_file
+        data_tests: [not_null]
+      - name: price_source_row_number
+        data_tests: [not_null]
+      - name: price_source
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['massive']

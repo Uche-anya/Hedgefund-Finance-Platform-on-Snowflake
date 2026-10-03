@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: settlement_exceptions
+    description: Settlement review list at the historical cutoff. Missing confirmations are included only on or after their due date. This is not a persistent case-management queue or proof of payment failure.
+    columns:
+      - name: execution_id
+        data_tests: [not_null, unique]
+      - name: review_reason
+        data_tests: [not_null]
+      - name: as_of
+        data_tests: [not_null]
+      - name: exception_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['NO_CONFIRMATION', 'DETAILS_MISMATCH', 'UNEXPECTED_CONFIRMATION']

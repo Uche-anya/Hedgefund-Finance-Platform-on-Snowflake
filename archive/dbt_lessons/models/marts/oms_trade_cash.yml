@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: oms_trade_cash
+    description: One row per original simulated execution, showing its expected cash effect at the execution price. Excludes fees and does not confirm settlement or available cash.
+    columns:
+      - name: event_id
+        data_tests: [not_null, unique]
+      - name: execution_id
+        data_tests: [not_null]
+      - name: settlement_due
+        data_tests: [not_null]
+      - name: currency
+        data_tests: [not_null]
+      - name: gross_trade_amount
+        data_tests: [not_null]
+      - name: expected_cash_change
+        data_tests: [not_null]

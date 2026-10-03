@@ -1,5 +1,8 @@
 with allocated as (
-    select business_date, execution_id, sum(quantity) as quantity
+    select
+        business_date,
+        execution_id,
+        sum(quantity) as quantity
     from {{ ref('stg_allocations') }}
     group by business_date, execution_id
 )
@@ -13,5 +16,7 @@ full outer join allocated a
     on e.execution_id = a.execution_id
     and e.business_date = a.business_date
 where e.execution_id is null
-   or a.execution_id is null
-   or e.quantity <> a.quantity
+
+      or a.execution_id is null
+
+      or e.quantity <> a.quantity

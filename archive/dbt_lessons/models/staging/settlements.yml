@@ -1,0 +1,32 @@
+version: 2
+models:
+  - name: stg_settlements
+    description: Full settlement confirmations for one simulated delivery. Partial settlements and reversals are not supported yet.
+    columns:
+      - name: event_id
+        data_tests: [not_null, unique]
+      - name: settlement_id
+        data_tests: [not_null, unique]
+      - name: execution_id
+        data_tests: [not_null, unique]
+      - name: cash_amount
+        data_tests: [not_null]
+      - name: settled_quantity
+        data_tests: [not_null]
+      - name: settlement_date
+        data_tests: [not_null]
+      - name: settled_at
+        data_tests: [not_null]
+      - name: published_at
+        data_tests: [not_null]
+  - name: oms_settlement_reconciliation
+    description: Expected trade amounts versus reported full settlements at the historical publication cutoff. Missing confirmation is not proof of failed payment.
+    columns:
+      - name: execution_id
+        data_tests: [not_null, unique]
+      - name: reconciliation_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['MATCHED', 'NO_CONFIRMATION', 'DETAILS_MISMATCH', 'UNEXPECTED_CONFIRMATION']
