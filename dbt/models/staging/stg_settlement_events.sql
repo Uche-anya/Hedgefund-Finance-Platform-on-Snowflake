@@ -1,0 +1,22 @@
+select
+    payload:event_id::varchar as event_id,
+    payload:scenario_id::varchar as scenario_id,
+    payload:source_system::varchar as source_system,
+    payload:settlement_id::varchar as settlement_id,
+    payload:execution_id::varchar as execution_id,
+    payload:account_id::varchar as account_id,
+    payload:instrument_id::varchar as instrument_id,
+    split_part(payload:instrument_id::varchar, '.', 1) as market_ticker,
+    payload:side::varchar as side,
+    try_to_decimal(payload:settled_quantity::varchar, 38, 9) as settled_quantity,
+    payload:currency::varchar as currency,
+    try_to_decimal(payload:cash_amount::varchar, 38, 9) as cash_amount,
+    try_to_date(payload:settlement_date::varchar) as settlement_date,
+    try_to_timestamp_tz(payload:settled_at::varchar) as settled_at,
+    try_to_timestamp_tz(payload:published_at::varchar) as published_at,
+    payload:settlement_status::varchar as settlement_status,
+    delivery_id,
+    source_file,
+    source_row_number,
+    loaded_at
+from {{ source('raw', 'settlement_events') }}

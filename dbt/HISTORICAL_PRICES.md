@@ -1,8 +1,9 @@
 # Historical price staging
 
-Live validation: the view built successfully on September 23, 2026. Its 24
-directly selected tests passed, followed by the explicit row-preservation test
-(25 data tests total). No build errors or warnings were reported.
+The historical model now has four tests: field validation, unique ticker/date,
+raw-to-staged row preservation, and the saved snapshot's expected coverage.
+Required fields and permitted values are checked together, rather than running
+one separate query per column. The pinned snapshot check is tagged `fixture`.
 
 stg_historical_prices is a view in NORTHBRIDGE_DEV.DBT_DEV. It selects the
 assembled delivery named by historical_price_delivery_id in dbt_project.yml.

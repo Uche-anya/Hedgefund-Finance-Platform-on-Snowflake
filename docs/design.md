@@ -43,7 +43,10 @@ flowchart TD
 **Immutable landing** means preserving deliveries unchanged so a result can be
 reproduced. Start with a local directory; S3 is the cloud target. **RAW** means
 data kept close to its received form. **dbt** will own analytical SQL models;
-**Airflow** will coordinate jobs, dependencies, retries and historical reruns.
+**Snowflake Tasks** will coordinate in-warehouse jobs, dependencies, retries and
+historical reruns. External producers will upload source files to Snowflake
+internal named stages. Snowpipe will load those files before the daily task graph
+runs.
 **Terraform** will define infrastructure, separate from dbt's analytical tables.
 
 ## Proposed sources

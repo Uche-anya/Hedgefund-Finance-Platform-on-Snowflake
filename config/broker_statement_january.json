@@ -1,0 +1,20 @@
+{
+  "source_replay": "data/replays/sim-dividend-a48996d29c0473a090db3b9f",
+  "statement_date": "2025-01-30",
+  "position_basis": "TRADE_DATE",
+  "expected_by": "2025-01-31T08:00:00+00:00",
+  "published_at_by_account": {
+    "SIM-REPLAY-01": "2025-01-31T06:30:00+00:00",
+    "SIM-REPLAY-02": "2025-01-31T10:15:00+00:00",
+    "SIM-REPLAY-03": "2025-01-31T06:30:00+00:00"
+  },
+  "quantity_adjustments": [
+    {"account_id": "SIM-REPLAY-01", "ticker": "AMZN", "change": "3", "label": "WRONG_QUANTITY"}
+  ],
+  "omitted_positions": [
+    {"account_id": "SIM-REPLAY-02", "ticker": "MSFT", "label": "MISSING_FROM_BROKER"}
+  ],
+  "extra_positions": [
+    {"account_id": "SIM-REPLAY-03", "ticker": "AAPL", "quantity": "12", "label": "UNEXPECTED_ACCOUNT_POSITION"}
+  ]
+}

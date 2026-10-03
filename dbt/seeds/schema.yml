@@ -1,0 +1,20 @@
+version: 2
+
+seeds:
+  - name: dim_instrument
+    description: Effective-dated identities for the 20 ticker symbols used by the replay. XOM has two rows because its share-class FIGI changed in July 2026.
+    columns:
+      - name: security_id
+        description: Northbridge identifier. It does not change when an external ticker changes.
+        data_tests: [unique]
+      - name: share_class_figi
+        data_tests: [unique]
+  - name: approved_corporate_actions
+    description: Corporate actions approved for portfolio accounting after operations review.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: reviewed_record_date
+        data_tests: [not_null]
+      - name: review_id
+        data_tests: [not_null]

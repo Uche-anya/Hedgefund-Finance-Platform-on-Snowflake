@@ -1,21 +1,46 @@
-name: northbridge
+﻿name: northbridge
 version: '1.0.0'
 config-version: 2
 profile: northbridge
 require-dbt-version: ['>=1.12.2', '<1.13.0']
 model-paths: ['models']
 test-paths: ['tests']
+seed-paths: ['seeds']
 on-run-start:
   - 'use secondary roles none'
 flags:
   send_anonymous_usage_stats: false
 vars:
-  historical_price_delivery_id: 'fb25ddd9838840488e4c8b971ff7e0ae'
-  price_delivery_id: '0a35a13d137e4627ace8d7a9d668f3ce'
-  delivery_id: '18ae80085f1043789b5d604ee44dc216'
-  business_date: '2025-01-06'
+  corporate_action_load_id: "{{ env_var('DBT_CORPORATE_ACTION_LOAD_ID', '890be0cfdcf2151ebb4aab47f0d53cd9') }}"
+  replay_delivery_id: "{{ env_var('DBT_REPLAY_DELIVERY_ID', 'sim-dividend-a48996d29c0473a090db3b9f') }}"
+  replay_scenario_id: "{{ env_var('DBT_REPLAY_SCENARIO_ID', 'sim-replay-406bbef8179cdbb0a3dd6df3') }}"
+  historical_price_delivery_id: "{{ env_var('DBT_HISTORICAL_PRICE_DELIVERY_ID', 'fb25ddd9838840488e4c8b971ff7e0ae') }}"
+  broker_delivery_id: "{{ env_var('DBT_BROKER_DELIVERY_ID', 'sim-broker-42a53a52c3913f138bf0ba35') }}"
+  broker_statement_date: "{{ env_var('DBT_BROKER_STATEMENT_DATE', '2025-01-30') }}"
+  broker_expected_by: "{{ env_var('DBT_BROKER_EXPECTED_BY', '2025-01-31T08:00:00+00:00') }}"
+  fx_delivery_id: "{{ env_var('DBT_FX_DELIVERY_ID', 'fx_rates-43dbf8fe9f4939cfee844e4f') }}"
+  treasury_delivery_id: "{{ env_var('DBT_TREASURY_DELIVERY_ID', 'treasury_rates-fb72a525531b06c98f3b9cb0') }}"
+  fund_admin_delivery_id: "{{ env_var('DBT_FUND_ADMIN_DELIVERY_ID', 'sim-admin-d4c87abd5740695f47b0bd8c') }}"
+  bank_delivery_id: "{{ env_var('DBT_BANK_DELIVERY_ID', 'sim-bank-8690941c886b2dc3602d214f') }}"
+  bank_statement_date: "{{ env_var('DBT_BANK_STATEMENT_DATE', '2025-02-07') }}"
 models:
   northbridge:
     +materialized: view
     marts:
       +materialized: table
+seeds:
+  northbridge:
+    dim_instrument:
+      +column_types:
+        security_id: varchar
+        ticker: varchar
+        valid_from: date
+        valid_to: date
+        provider_cik: varchar
+        reviewed_issuer_cik: varchar
+        predecessor_security_id: varchar
+    approved_corporate_actions:
+      +column_types:
+        event_id: varchar
+        reviewed_record_date: date
+        review_id: varchar

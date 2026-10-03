@@ -1,0 +1,11 @@
+{
+  "source_replay": "data/replays/sim-dividend-a48996d29c0473a090db3b9f",
+  "source_admin": "data/fund_admin/sim-admin-d4c87abd5740695f47b0bd8c",
+  "statement_date": "2025-02-07",
+  "cutoff": "2025-02-07T22:00:00+00:00",
+  "expected_by": "2025-02-08T08:00:00+00:00",
+  "published_at": "2025-02-08T06:00:00+00:00",
+  "adjustments": [
+    {"account_id": "SIM-REPLAY-02", "amount": "25.00", "label": "UNEXPLAINED_BANK_ITEM"}
+  ]
+}

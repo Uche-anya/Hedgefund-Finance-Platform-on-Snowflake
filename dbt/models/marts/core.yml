@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: stg_activity_events
+    description: Typed executions, settlements, valuation sessions, opening cash and dividend payments from the selected delivery.
+  - name: fct_daily_positions
+    description: Daily account positions, including market days without trades. Securities resolve through the effective-dated instrument master.
+  - name: fct_daily_valuations
+    description: Signed position values using same-day unadjusted closing prices.
+    columns:
+      - name: close_price
+        data_tests: [not_null]
+  - name: fct_daily_cash
+    description: Settled cash, trade receivables and payables, and approved dividend balances by account and day.
+  - name: fct_daily_nav
+    description: Simplified daily NAV from cash, settlement balances, approved dividends and signed equity values.
+  - name: fct_daily_nav_reporting
+    description: USD NAV translated to EUR and GBP with same-day ECB reference rates.
+  - name: fct_cash_yield_benchmark
+    description: Non-accounting daily interest estimate using the official one-month Treasury yield.
+  - name: fct_bank_cash_reconciliation
+    description: Internal settled cash compared with the independent simulated bank balance.

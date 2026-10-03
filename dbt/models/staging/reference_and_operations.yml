@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_fx_rates
+    description: Daily ECB USD and GBP reference-rate legs against EUR.
+  - name: stg_treasury_rates
+    description: Daily official one-month US Treasury par yield.
+  - name: stg_fund_admin_events
+    description: Typed simulated investor flows and fund expenses.
+  - name: stg_bank_cash_statements
+    description: Typed simulated independent bank closing balances.
+  - name: stg_oms_events
+    description: Typed execution reports from the dedicated OMS landing table.
+    columns:
+      - name: event_id
+        data_tests: [not_null, unique]
+      - name: execution_id
+        data_tests: [not_null]
+  - name: stg_settlement_events
+    description: Typed custodian settlement confirmations from their own landing table.
+    columns:
+      - name: event_id
+        data_tests: [not_null, unique]
+      - name: execution_id
+        data_tests: [not_null]

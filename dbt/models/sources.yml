@@ -1,18 +1,45 @@
 version: 2
+
 sources:
   - name: raw
     database: NORTHBRIDGE_DEV
     schema: RAW
     tables:
+      - name: corporate_actions
+        identifier: CORPORATE_ACTIONS
+      - name: corporate_action_reviews
+        identifier: CORPORATE_ACTION_REVIEWS
+      - name: replay_inputs
+        identifier: REPLAY_INPUTS
+        description: Complete saved replay packages, including simulated trades and custodian events.
+      - name: oms_events
+        identifier: OMS_EVENTS
+        description: Execution reports delivered by the OMS event feed and loaded through Snowpipe.
+      - name: settlement_events
+        identifier: SETTLEMENT_EVENTS
+        description: Settlement confirmations received independently from the custodian feed.
       - name: historical_prices
         identifier: HISTORICAL_PRICES
-        description: Assembled Massive daily bars with reviewed repairs and load provenance.
-      - name: closing_prices
-        identifier: CLOSING_PRICES
-        description: Saved EODHD closing prices with file and delivery metadata.
-      - name: executions
-        identifier: EXECUTIONS
-        description: Received simulated execution records, including delivery metadata.
-      - name: allocations
-        identifier: ALLOCATIONS
-        description: Received simulated portfolio allocations, including delivery metadata.
+        description: Massive daily bars with reviewed ticker-history repairs and load metadata.
+      - name: broker_positions
+        identifier: BROKER_POSITIONS
+        description: Position statements received from the simulated prime broker.
+      - name: fx_rates
+        identifier: FX_RATES
+        description: Official daily ECB reference-rate observations used for reporting currency conversion.
+      - name: treasury_rates
+        identifier: TREASURY_RATES
+        description: Official US Treasury daily one-month par yields used as a cash benchmark.
+      - name: fund_admin_events
+        identifier: FUND_ADMIN_EVENTS
+        description: Simulated investor flows and fund expense records.
+      - name: bank_cash_statements
+        identifier: BANK_CASH_STATEMENTS
+        description: Simulated independent bank closing balances.
+  - name: operations
+    database: NORTHBRIDGE_DEV
+    schema: OPERATIONS
+    tables:
+      - name: deliveries
+        identifier: DELIVERIES
+        description: Immutable receipt and row-count evidence for source deliveries.

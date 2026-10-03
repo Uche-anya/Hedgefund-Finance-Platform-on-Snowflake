@@ -1,0 +1,21 @@
+select
+    payload:event_id::varchar as event_id,
+    payload:scenario_id::varchar as scenario_id,
+    payload:source_system::varchar as source_system,
+    payload:execution_id::varchar as execution_id,
+    payload:account_id::varchar as account_id,
+    payload:instrument_id::varchar as instrument_id,
+    split_part(payload:instrument_id::varchar, '.', 1) as market_ticker,
+    payload:side::varchar as side,
+    try_to_decimal(payload:quantity::varchar, 38, 9) as quantity,
+    try_to_decimal(payload:execution_price::varchar, 38, 9) as execution_price,
+    payload:currency::varchar as currency,
+    try_to_date(payload:business_date::varchar) as business_date,
+    try_to_date(payload:settlement_due::varchar) as settlement_due,
+    try_to_timestamp_tz(payload:published_at::varchar) as published_at,
+    payload:execution_status::varchar as execution_status,
+    delivery_id,
+    source_file,
+    source_row_number,
+    loaded_at
+from {{ source('raw', 'oms_events') }}

@@ -1,0 +1,5 @@
+version: 2
+
+models:
+  - name: stg_broker_positions
+    description: Typed prime-broker position records resolved from broker FIGIs to Northbridge security IDs.
