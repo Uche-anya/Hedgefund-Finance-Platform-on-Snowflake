@@ -1,0 +1,30 @@
+{
+  "run_mode": "REPLAY",
+  "business_date": "2025-02-07",
+  "calculation_cutoff": "2025-02-08T08:00:00+00:00",
+  "scenario_id": "sim-replay-406bbef8179cdbb0a3dd6df3",
+  "inputs": [
+    {"source_name": "activity_events", "delivery_id": "sim-dividend-a48996d29c0473a090db3b9f", "manifest": "data/replays/sim-dividend-a48996d29c0473a090db3b9f/manifest.json", "expected_rows": 6394},
+    {"source_name": "historical_prices", "delivery_id": "fb25ddd9838840488e4c8b971ff7e0ae", "manifest": "data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae/manifest.json", "expected_rows": 250036},
+    {"source_name": "corporate_actions", "delivery_id": "890be0cfdcf2151ebb4aab47f0d53cd9", "manifest": "data/corporate_action_loads/890be0cfdcf2151ebb4aab47f0d53cd9/manifest.json", "expected_rows": 3317},
+    {"source_name": "broker_positions", "delivery_id": "sim-broker-42a53a52c3913f138bf0ba35", "manifest": "data/broker_statements/sim-broker-42a53a52c3913f138bf0ba35/manifest.json", "expected_rows": 40},
+    {"source_name": "fx_rates", "delivery_id": "fx_rates-43dbf8fe9f4939cfee844e4f", "manifest": "data/fx_rates/fx_rates-43dbf8fe9f4939cfee844e4f/manifest.json", "expected_rows": 23},
+    {"source_name": "treasury_rates", "delivery_id": "treasury_rates-fb72a525531b06c98f3b9cb0", "manifest": "data/treasury_rates/treasury_rates-fb72a525531b06c98f3b9cb0/manifest.json", "expected_rows": 23},
+    {"source_name": "fund_admin", "delivery_id": "sim-admin-d4c87abd5740695f47b0bd8c", "manifest": "data/fund_admin/sim-admin-d4c87abd5740695f47b0bd8c/manifest.json", "expected_rows": 4},
+    {"source_name": "bank_cash", "delivery_id": "sim-bank-8690941c886b2dc3602d214f", "manifest": "data/bank_statements/sim-bank-8690941c886b2dc3602d214f/manifest.json", "expected_rows": 2}
+  ],
+  "dbt_vars": {
+    "corporate_action_load_id": "890be0cfdcf2151ebb4aab47f0d53cd9",
+    "replay_delivery_id": "sim-dividend-a48996d29c0473a090db3b9f",
+    "replay_scenario_id": "sim-replay-406bbef8179cdbb0a3dd6df3",
+    "historical_price_delivery_id": "fb25ddd9838840488e4c8b971ff7e0ae",
+    "broker_delivery_id": "sim-broker-42a53a52c3913f138bf0ba35",
+    "broker_statement_date": "2025-01-30",
+    "broker_expected_by": "2025-01-31T08:00:00+00:00",
+    "fx_delivery_id": "fx_rates-43dbf8fe9f4939cfee844e4f",
+    "treasury_delivery_id": "treasury_rates-fb72a525531b06c98f3b9cb0",
+    "fund_admin_delivery_id": "sim-admin-d4c87abd5740695f47b0bd8c",
+    "bank_delivery_id": "sim-bank-8690941c886b2dc3602d214f",
+    "bank_statement_date": "2025-02-07"
+  }
+}

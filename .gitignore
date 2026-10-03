@@ -11,3 +11,9 @@ dbt/dbt_packages/
 .env.*
 # Generated for this machine by scripts/dbt_key.py
 snowflake/07_dbt_key_access.sql
+# Generated for this machine by scripts/ingest_key.py
+snowflake/27_ingest_key_access.sql
+# Generated for this machine by scripts/runner_key.py
+snowflake/32_runner_key_access.sql
+# Generated for this machine by scripts/publisher_key.py
+snowflake/36_publisher_key_access.sql
