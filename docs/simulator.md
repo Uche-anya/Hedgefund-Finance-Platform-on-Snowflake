@@ -82,7 +82,7 @@ python -m unittest discover -s tests -p test_simulator.py -v
 To see a deliberately invalid trade rejected without changing the generator:
 
 ```powershell
-python -c "from simulator import create_execution, validate_execution; event = create_execution(); event['quantity'] = '-10'; validate_execution(event)"
+python -c "from simulation.simulator import create_execution, validate_execution; event = create_execution(); event['quantity'] = '-10'; validate_execution(event)"
 ```
 
 The expected last line is:
@@ -102,3 +102,6 @@ new set of trades rather than retrying the saved messages.
 
 This is a local event producer, not an end-to-end Snowflake streaming connection.
 Later steps add corrections, allocations, realistic daily activity and streaming.
+
+The next local lesson is the [historical-price scenario](historical_simulator.md),
+which uses saved previous-day closes as the reference for fictional prices.
