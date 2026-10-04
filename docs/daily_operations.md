@@ -19,7 +19,8 @@ deliveries explicitly.
 - All eight selected deliveries are registered and ready.
 - The local controller completed the same February close twice under run ID
   `northbridge-run-37e9ee2c5c3e77ab20f13d57`. Attempts 1 and 2 both passed.
-- The dbt build passed 64 results. Independent Python checks matched 920
+- The original close evidence passed 64 dbt results. The later instrument-history
+  change passed 66 results. Independent Python checks matched 920
   valuations and 46 NAV rows.
 - The expected exceptions were reproduced: three position breaks, one late
   broker statement and one $25 bank-cash break.

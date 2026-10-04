@@ -1,6 +1,6 @@
 # Settlement exception report
 
-The [late-confirmation lesson](../docs/late_settlement.md) advances the current
+The [late-confirmation lesson](../../../docs/late_settlement.md) advances the current
 cutoff to January 8 and clears this exception. The one-row example below
 describes the original January 7 report, retained in SETTLEMENT_REPORT_HISTORY.
 

@@ -110,7 +110,7 @@ Part 10 connects GBP translation to local publication. Candidates preserve the
 USD close, GBP close and FX evidence. Separate synthetic GBP NAV/cash reference
 arithmetic and raw-leg direction checks join all USD controls before approval.
 New FX versions require matching references and new reviews. See
-`docs/lesson_10_gbp_approval.md`; authenticated review and deployment remain pending.
+`archive/python_lessons/docs/lesson_10_gbp_approval.md`; authenticated review and deployment remain pending.
 
 ## Saved-input pipeline runner
 

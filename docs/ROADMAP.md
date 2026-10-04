@@ -1,29 +1,33 @@
 # Remaining work
 
-The detailed status and release criteria are in [PROJECT_AUDIT.md](PROJECT_AUDIT.md).
+The calculation platform is built and tested in development. The next phase is
+turning that controlled replay into an operated daily service.
 
-The multi-day replay is the current completed milestone. Keep its saved inputs
-and independent accounting checks as a reference while adding each feature.
+## Next milestone: production dry run
 
-1. **Separate ingestion from administration.** Provision tables once, then give
-   an ingestion service only the access it needs. Remove personal MFA from the
-   scheduled run. Parameterise delivery IDs and dates before accepting new days.
-2. **Add independent broker statements.** Produce a separate simulated statement
-   feed with intentional disagreements. Reconcile positions and cash, keeping
-   missing reports distinct from confirmed mismatches.
-3. **Schedule and monitor runs.** Add a Snowflake task graph around ingestion
-   readiness, dbt checks and reports. Exercise retries, failed inputs and recovery.
-   A historical replay schedule is not a live market-data feed.
-4. **Add continuous event ingestion.** Upload simulator events to Snowflake
-   internal named stages and use Snowpipe for file ingestion. Small files arriving
-   repeatedly are micro-batches.
-5. **Extend accounting.** Integrate ECB FX, corporate actions, fees and opening
-   positions. Model each additional asset type before claiming it can be valued.
-6. **Add anomaly detection.** Start with transparent trade-quality rules, then
-   compare Isolation Forest using earlier data for training and later data for
-   evaluation. Keep intentionally generated anomalies labelled as synthetic;
-   model scores alone do not establish fraud or a reconciliation-break cause.
+1. Convert the RAW setup scripts into an ordered, environment-aware migration.
+2. Deploy RAW objects, the native dbt project and the suspended task graph to
+   `NORTHBRIDGE_PROD`.
+3. Land one complete test delivery through service identities.
+4. Run the task graph manually and collect task, dbt and reconciliation evidence.
+5. Approve and publish one test NAV through the separate approval path.
+6. Test an exact retry, a missing delivery and recovery from one failed task.
 
-Live daily operation also needs a configured market-data credential, entitlement
-checks, secrets management, alerting and a deployment environment. The existing
-saved Massive snapshot supports reproducible development without fresh API calls.
+## After the dry run
+
+1. Add alerts and an operations dashboard.
+2. Apply governance tags and complete the first access review.
+3. Test recovery using Time Travel or a zero-copy clone.
+4. Measure query time, bytes scanned and credits before changing table design.
+5. Agree the weekday schedule and source cutoffs, then enable the root task.
+
+## Later scope
+
+- Replace fictional broker, bank and administrator feeds when real contracts are
+  available.
+- Add other asset classes only with matching reference, pricing and accounting
+  data.
+- Train an anomaly model only after reviewed exception history provides useful
+  labels.
+
+See [PROJECT_AUDIT.md](PROJECT_AUDIT.md) for the evidence and release criteria.

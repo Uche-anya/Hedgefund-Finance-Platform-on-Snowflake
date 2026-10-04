@@ -1,6 +1,6 @@
 # Compare expected cash with settlement confirmations
 
-The [late-confirmation lesson](../docs/late_settlement.md) adds a second delivery
+The [late-confirmation lesson](../../../docs/late_settlement.md) adds a second delivery
 and advances the cutoff to January 8. The four-match/one-missing results below
 describe the original January 7 report, which is retained in history.
 
