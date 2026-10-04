@@ -46,10 +46,11 @@ jobs:
       id-token: write
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-      SNOWFLAKE_DATABASE: NORTHBRIDGE_CI_PR_${{ github.event.number }}
+      SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_CI_BASE_DATABASE }}
       SNOWFLAKE_SCHEMA: OPERATIONS
       SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_CI
       SNOWFLAKE_WAREHOUSE: NORTHBRIDGE_CI_WH
+      PR_DATABASE: NORTHBRIDGE_CI_PR_${{ github.event.number }}
       TEST_PROJECT: NORTHBRIDGE_DBT_PR_${{ github.event.number }}
     steps:
       - name: Check out repository
@@ -67,15 +68,15 @@ jobs:
         run: snow connection test -x
 
       - name: Clone the CI database
-        env:
-          CI_BASE_DATABASE: ${{ vars.SNOWFLAKE_CI_BASE_DATABASE }}
         run: |
-          case "$CI_BASE_DATABASE" in
+          case "$SNOWFLAKE_DATABASE" in
             ''|*[!A-Z0-9_]* ) echo 'SNOWFLAKE_CI_BASE_DATABASE is invalid'; exit 1 ;;
           esac
-          snow sql -x -q "CREATE OR REPLACE TRANSIENT DATABASE $SNOWFLAKE_DATABASE CLONE $CI_BASE_DATABASE"
+          snow sql -x -q "CREATE OR REPLACE TRANSIENT DATABASE $PR_DATABASE CLONE $SNOWFLAKE_DATABASE"
 
       - name: Deploy test dbt project
+        env:
+          SNOWFLAKE_DATABASE: ${{ env.PR_DATABASE }}
         run: |
           snow dbt deploy "$TEST_PROJECT" \
             --source ./dbt \
@@ -86,6 +87,8 @@ jobs:
             -x
 
       - name: Build and test models
+        env:
+          SNOWFLAKE_DATABASE: ${{ env.PR_DATABASE }}
         run: |
           snow dbt execute -x \
             --env ci \
@@ -94,4 +97,4 @@ jobs:
 
       - name: Remove pull-request database
         if: always()
-        run: snow sql -x -q "DROP DATABASE IF EXISTS $SNOWFLAKE_DATABASE"
+        run: snow sql -x -q "DROP DATABASE IF EXISTS $PR_DATABASE"
