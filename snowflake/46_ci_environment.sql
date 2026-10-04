@@ -13,7 +13,7 @@ CREATE USER IF NOT EXISTS NORTHBRIDGE_GITHUB_CI
     WORKLOAD_IDENTITY = (
         TYPE = OIDC
         ISSUER = 'https://token.actions.githubusercontent.com'
-        SUBJECT = 'repo:Uche-anya/Hedgefund-Finance-Platform-on-Snowflake:environment:ci'
+        SUBJECT = 'repo:Uche-anya@108993926/Hedgefund-Finance-Platform-on-Snowflake@1379734472:environment:ci'
     )
     COMMENT = 'GitHub Actions identity for Northbridge pull-request checks';
 
@@ -24,7 +24,7 @@ ALTER USER NORTHBRIDGE_GITHUB_CI SET
     WORKLOAD_IDENTITY = (
         TYPE = OIDC
         ISSUER = 'https://token.actions.githubusercontent.com'
-        SUBJECT = 'repo:Uche-anya/Hedgefund-Finance-Platform-on-Snowflake:environment:ci'
+        SUBJECT = 'repo:Uche-anya@108993926/Hedgefund-Finance-Platform-on-Snowflake@1379734472:environment:ci'
     );
 
 GRANT ROLE NORTHBRIDGE_DBT_CI TO USER NORTHBRIDGE_GITHUB_CI;
