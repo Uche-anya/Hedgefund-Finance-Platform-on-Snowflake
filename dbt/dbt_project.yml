@@ -33,9 +33,11 @@ seeds:
     dim_instrument:
       +column_types:
         security_id: varchar
+        instrument_version_id: varchar
         ticker: varchar
         valid_from: date
         valid_to: date
+        is_current: boolean
         provider_cik: varchar
         reviewed_issuer_cik: varchar
         predecessor_security_id: varchar

@@ -2,13 +2,17 @@ version: 2
 
 seeds:
   - name: dim_instrument
-    description: Effective-dated identities for the 20 ticker symbols used by the replay. XOM has two rows because its share-class FIGI changed in July 2026.
+    description: Effective-dated instrument identities. A security keeps its security ID when an attribute such as its ticker changes; each dated version has its own version ID.
     columns:
+      - name: instrument_version_id
+        description: Unique identifier for one effective-dated version of a security.
+        data_tests: [unique, not_null]
       - name: security_id
-        description: Northbridge identifier. It does not change when an external ticker changes.
-        data_tests: [unique]
+        description: Stable Northbridge identifier shared by every version of the same security.
+        data_tests: [not_null]
       - name: share_class_figi
-        data_tests: [unique]
+        description: Provider identifier used to connect mastered securities to market data.
+        data_tests: [not_null]
   - name: approved_corporate_actions
     description: Corporate actions approved for portfolio accounting after operations review.
     columns:

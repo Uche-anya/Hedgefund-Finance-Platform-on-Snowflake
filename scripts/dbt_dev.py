@@ -15,9 +15,11 @@ def main():
     parser.add_argument('--select', help='Optional dbt model selector, for example stg_executions')
     parser.add_argument('--exclude', help='Optional dbt exclusion, for example tag:fixture')
     parser.add_argument('--vars', help='dbt variables as a YAML or JSON string')
+    parser.add_argument('--full-refresh', action='store_true',
+                        help='Recreate seeds and models whose stored shape has changed')
     args = parser.parse_args()
-    if (args.select or args.exclude) and args.command != 'build':
-        parser.error('--select and --exclude are only supported with build')
+    if (args.select or args.exclude or args.full_refresh) and args.command != 'build':
+        parser.error('--select, --exclude and --full-refresh are only supported with build')
 
     root = Path(__file__).resolve().parent.parent
     executable = root / '.venv' / 'dbt' / 'Scripts' / 'dbt.exe'
@@ -38,6 +40,8 @@ def main():
     command = [str(executable), args.command, '--project-dir', 'dbt', '--profiles-dir', 'dbt']
     if args.command == 'build':
         command.append('--fail-fast')
+        if args.full_refresh:
+            command.append('--full-refresh')
         if args.select:
             # Tests requiring unselected models wait for the full project build.
             command.extend(['--select', args.select, '--indirect-selection', 'cautious'])
