@@ -8,5 +8,8 @@ terraform {
     }
   }
 
-  backend "s3" {}
+  # TF_CLOUD_ORGANIZATION and TF_WORKSPACE select the HCP location. Keeping
+  # those personal account details out of Git also lets another contractor
+  # adopt the same configuration without editing this file.
+  cloud {}
 }

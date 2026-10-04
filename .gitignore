@@ -23,5 +23,4 @@ snowflake/36_publisher_key_access.sql
 *.tfstate
 *.tfstate.*
 *.tfplan
-backend.hcl
 crash.log
