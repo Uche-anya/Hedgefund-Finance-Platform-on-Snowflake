@@ -5,11 +5,14 @@ resource "snowflake_account_role" "ci" {
 
 resource "snowflake_service_user" "github_ci" {
   name                           = local.ci_user
+  login_name                     = local.ci_user
+  display_name                   = local.ci_user
   comment                        = "GitHub Actions identity for Northbridge pull-request checks"
   default_role                   = snowflake_account_role.ci.name
   default_warehouse              = snowflake_warehouse.ci.name
   default_namespace              = "${var.ci_base_database}.OPERATIONS"
   default_secondary_roles_option = "NONE"
+  disabled                       = "false"
 
   default_workload_identity {
     oidc {
@@ -26,29 +29,36 @@ resource "snowflake_resource_monitor" "ci" {
   start_timestamp = "IMMEDIATELY"
   notify_triggers = [75]
   suspend_trigger = 100
+
+  lifecycle {
+    ignore_changes = [start_timestamp]
+  }
 }
 
 resource "snowflake_warehouse" "ci" {
-  name                = local.ci_warehouse
-  warehouse_type      = "STANDARD"
-  warehouse_size      = "XSMALL"
-  auto_suspend        = 60
-  auto_resume         = "true"
-  initially_suspended = true
-  min_cluster_count   = 1
-  max_cluster_count   = 1
-  scaling_policy      = "STANDARD"
-  resource_monitor    = snowflake_resource_monitor.ci.fully_qualified_name
-  comment             = "Small warehouse for pull-request dbt builds"
+  name                      = local.ci_warehouse
+  warehouse_type            = "STANDARD"
+  warehouse_size            = "XSMALL"
+  auto_suspend              = 60
+  auto_resume               = "true"
+  initially_suspended       = true
+  min_cluster_count         = 1
+  max_cluster_count         = 1
+  scaling_policy            = "STANDARD"
+  generation                = "2"
+  enable_query_acceleration = "false"
+  resource_monitor          = snowflake_resource_monitor.ci.fully_qualified_name
+  comment                   = "Small warehouse for pull-request dbt builds"
 }
 
 # The base is deliberately not a Terraform database resource. It is a data
 # snapshot refreshed with Snowflake CLONE, while Terraform manages its schema.
 resource "snowflake_schema" "ci_dbt" {
-  database     = var.ci_base_database
-  name         = "DBT_CI"
-  is_transient = "false"
-  comment      = "Destination schema inherited by pull-request database clones"
+  database            = var.ci_base_database
+  name                = "DBT_CI"
+  is_transient        = "false"
+  with_managed_access = "false"
+  comment             = "Destination schema inherited by pull-request database clones"
 }
 
 resource "snowflake_grant_account_role" "ci_to_user" {

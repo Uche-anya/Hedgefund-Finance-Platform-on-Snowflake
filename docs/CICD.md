@@ -113,9 +113,9 @@ Terraform does not manage dbt relations, raw table DDL, task SQL or the data
 inside `NORTHBRIDGE_CI_BASE`. The CI base is a reviewed Snowflake clone and has
 a different lifecycle from long-lived infrastructure.
 
-Terraform stores shared state in an HCP Terraform workspace named
-`northbridge-snowflake`. The HCP organization is supplied through
-`TF_CLOUD_ORGANIZATION`, so a personal account name is not committed to Git.
+Terraform stores shared state in the `northbridge-snowflake` workspace in the
+`northbridge-fund-anya` HCP Terraform organization. The local wrapper supplies
+those names on each run.
 Pull requests run `terraform fmt` and `terraform validate` without opening the
 remote state or connecting to Snowflake.
 

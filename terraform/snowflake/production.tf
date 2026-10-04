@@ -38,11 +38,14 @@ resource "snowflake_account_role" "prod_runtime" {
 
 resource "snowflake_service_user" "github_prod_deploy" {
   name                           = local.prod_deploy_user
+  login_name                     = local.prod_deploy_user
+  display_name                   = local.prod_deploy_user
   comment                        = "GitHub Actions identity for reviewed production dbt deployments"
   default_role                   = snowflake_account_role.prod_deploy.name
   default_warehouse              = snowflake_warehouse.prod.name
   default_namespace              = "${snowflake_database.prod.name}.OPERATIONS"
   default_secondary_roles_option = "NONE"
+  disabled                       = "false"
 
   default_workload_identity {
     oidc {
@@ -59,20 +62,26 @@ resource "snowflake_resource_monitor" "prod" {
   start_timestamp = "IMMEDIATELY"
   notify_triggers = [75]
   suspend_trigger = 100
+
+  lifecycle {
+    ignore_changes = [start_timestamp]
+  }
 }
 
 resource "snowflake_warehouse" "prod" {
-  name                = local.prod_warehouse
-  warehouse_type      = "STANDARD"
-  warehouse_size      = "XSMALL"
-  auto_suspend        = 60
-  auto_resume         = "true"
-  initially_suspended = true
-  min_cluster_count   = 1
-  max_cluster_count   = 1
-  scaling_policy      = "STANDARD"
-  resource_monitor    = snowflake_resource_monitor.prod.fully_qualified_name
-  comment             = "Production compute for deployment and the daily close"
+  name                      = local.prod_warehouse
+  warehouse_type            = "STANDARD"
+  warehouse_size            = "XSMALL"
+  auto_suspend              = 60
+  auto_resume               = "true"
+  initially_suspended       = true
+  min_cluster_count         = 1
+  max_cluster_count         = 1
+  scaling_policy            = "STANDARD"
+  generation                = "2"
+  enable_query_acceleration = "false"
+  resource_monitor          = snowflake_resource_monitor.prod.fully_qualified_name
+  comment                   = "Production compute for deployment and the daily close"
 }
 
 resource "snowflake_grant_account_role" "prod_deploy_to_user" {

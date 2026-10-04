@@ -19,18 +19,18 @@ one shared, locked state history. Create an HCP Terraform organization and a
 CLI-driven workspace named `northbridge-snowflake`, then log in from this
 computer. In the workspace's **Settings > General**, select **Local** execution
 mode. HCP will store and lock state while Terraform continues to run on this
-computer using the existing Snowflake profile.
+computer.
 
 ```powershell
 terraform login
-$env:TF_CLOUD_ORGANIZATION = 'your-hcp-organization'
+$env:TF_CLOUD_ORGANIZATION = 'northbridge-fund-anya'
 $env:TF_WORKSPACE = 'northbridge-snowflake'
-terraform -chdir=terraform/snowflake init -reconfigure
+terraform -chdir=terraform/snowflake init
 ```
 
 The HCP token is stored in Terraform's user-level credentials file, outside
-this repository. The organization and workspace are supplied as environment
-variables, so personal HCP account details are not committed to Git.
+this repository. The project wrapper supplies the Northbridge organization and
+workspace on later commands.
 
 ## Adopt the existing CI objects
 
@@ -39,22 +39,25 @@ them before the first plan so Terraform adopts them rather than trying to
 create replacements:
 
 ```powershell
-terraform -chdir=terraform/snowflake import snowflake_account_role.ci '"NORTHBRIDGE_DBT_CI"'
-terraform -chdir=terraform/snowflake import snowflake_service_user.github_ci '"NORTHBRIDGE_GITHUB_CI"'
-terraform -chdir=terraform/snowflake import snowflake_resource_monitor.ci '"NORTHBRIDGE_CI_MONITOR"'
-terraform -chdir=terraform/snowflake import snowflake_warehouse.ci '"NORTHBRIDGE_CI_WH"'
-terraform -chdir=terraform/snowflake import snowflake_schema.ci_dbt '"NORTHBRIDGE_CI_BASE"."DBT_CI"'
+python scripts/terraform_snowflake.py import snowflake_account_role.ci '"NORTHBRIDGE_DBT_CI"'
+python scripts/terraform_snowflake.py import snowflake_service_user.github_ci '"NORTHBRIDGE_GITHUB_CI"'
+python scripts/terraform_snowflake.py import snowflake_resource_monitor.ci '"NORTHBRIDGE_CI_MONITOR"'
+python scripts/terraform_snowflake.py import snowflake_warehouse.ci '"NORTHBRIDGE_CI_WH"'
+python scripts/terraform_snowflake.py import snowflake_schema.ci_dbt '"NORTHBRIDGE_CI_BASE"."DBT_CI"'
 ```
 
 The first plan will also propose the production foundations. Use local
-execution for this first adoption so it can reuse the existing Snowflake CLI
-profile. Review the saved plan before applying it:
+execution so the wrapper can read the administrator password from Windows
+Credential Manager. Review the saved plan before applying it:
 
 ```powershell
-terraform -chdir=terraform/snowflake plan -out=northbridge.tfplan
-terraform -chdir=terraform/snowflake apply northbridge.tfplan
+python scripts/terraform_snowflake.py plan
+python scripts/terraform_snowflake.py apply
 ```
 
-Terraform uses the local `northbridge_admin` Snowflake profile and assumes
-`ACCOUNTADMIN` only while changing account-level infrastructure. GitHub's CI
-and production deployment users receive the smaller roles defined here.
+The wrapper retrieves the same password as `snow_admin.py` from Windows
+Credential Manager and passes it to Terraform only for the lifetime of the
+process. `plan` writes `northbridge.tfplan`, and `apply` uses that exact saved
+plan. Terraform assumes `ACCOUNTADMIN` while changing account-level
+infrastructure. GitHub's CI and production deployment users receive the
+smaller roles defined here.
