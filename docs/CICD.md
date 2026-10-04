@@ -78,3 +78,15 @@ database and OIDC service user. After the live pull-request build is proven, add
 a separate production workflow that deploys on merges to `main`. The production
 job will use its own GitHub environment, OIDC user and deployment role; the
 daily Snowflake task will continue to run under the production runtime role.
+
+The Snowflake objects are defined in `snowflake/46_ci_environment.sql`. The file
+also creates and removes a smoke-test clone to prove that the CI role can read
+the snapshot, create dbt relations and clean up its own database. Run it with:
+
+```powershell
+.\.venv\snowflake-cli\Scripts\python.exe scripts\snow_admin.py --file snowflake\46_ci_environment.sql
+```
+
+After that succeeds, create the GitHub `ci` environment and repository settings
+listed above. Set `SNOWFLAKE_CI_ENABLED` last, because that switch allows pull
+requests to start spending Snowflake credits.
