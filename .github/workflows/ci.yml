@@ -106,7 +106,7 @@ jobs:
           snow dbt execute -x \
             --env ci \
             --env-vars "{\"DBT_DATABASE\":\"$SNOWFLAKE_DATABASE\",\"DBT_SOURCE_DATABASE\":\"$SNOWFLAKE_DATABASE\"}" \
-            "$TEST_PROJECT" build --target ci --exclude tag:fixture
+            "$TEST_PROJECT" build --target ci --full-refresh --exclude tag:fixture
 
       - name: Remove pull-request database
         if: always()
