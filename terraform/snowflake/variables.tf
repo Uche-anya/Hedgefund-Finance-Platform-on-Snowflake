@@ -1,9 +1,3 @@
-variable "snowflake_profile" {
-  description = "Snowflake CLI profile used for an administrator-run plan or apply."
-  type        = string
-  default     = "northbridge_admin"
-}
-
 variable "github_oidc_issuer" {
   description = "Issuer used by GitHub Actions OIDC tokens."
   type        = string
