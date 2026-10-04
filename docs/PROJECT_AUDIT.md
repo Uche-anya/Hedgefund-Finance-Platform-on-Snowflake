@@ -19,6 +19,8 @@ Snowflake account, based on the checks completed during the build.
   SQ to XYZ ticker change and a separate XOM successor security.
 - Positions, cash, settlement obligations, valuations, NAV, FX reporting,
   dividends and broker/bank reconciliations are calculated in Snowflake.
+- A read-only analysis pack measures flow-adjusted return, drawdown, exposure,
+  concentration, P&L attribution and the financial size of operating breaks.
 - An independent Python calculation agrees with 920 valuations and 46 daily NAV
   balances. The Python suite currently contains 235 tests.
 - Run control records selected deliveries, attempts and status. NAV approval and
