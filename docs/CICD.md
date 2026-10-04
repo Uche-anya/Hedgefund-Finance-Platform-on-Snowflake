@@ -53,11 +53,13 @@ Create a GitHub environment named `ci`, then add:
 The Snowflake OIDC service user must trust this exact GitHub subject:
 
 ```text
-repo:Uche-anya/Hedgefund-Finance-Platform-on-Snowflake:environment:ci
+repo:Uche-anya@108993926/Hedgefund-Finance-Platform-on-Snowflake@1379734472:environment:ci
 ```
 
-GitHub supplies that subject because the live job uses the `ci` environment.
-Snowflake matches it to the service user and gives the job a short-lived login.
+GitHub supplies that subject because the account uses immutable owner and
+repository IDs in its OIDC claims and the live job selects the `ci`
+environment. Snowflake matches it to the service user and gives the job a
+short-lived login.
 
 ## dbt environment files
 
