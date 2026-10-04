@@ -24,6 +24,10 @@ The dbt project has 20 models, 54 data tests and two reference seeds. An
 independent Python calculation agrees with 920 valued positions and 46
 account-day NAV balances. The Python suite has 235 tests.
 
+A read-only analysis pack reports flow-adjusted performance, drawdown, long and
+short exposure, concentration, P&L attribution and operational materiality from
+the same controlled close.
+
 ## How the close works
 
 ```mermaid
@@ -125,6 +129,7 @@ retry; then approve one test NAV through the separate publisher path.
 - [CI/CD design](docs/CICD.md)
 - [Snowflake governance](docs/snowflake_governance.md)
 - [Snowflake performance decisions](docs/snowflake_performance.md)
+- [Portfolio performance and control analysis](analysis/README.md)
 - [Source integration summary](docs/final_sources.md)
 - [Snowflake SQL index](snowflake/README.md)
 - [Archived Python lessons](archive/python_lessons/README.md)
