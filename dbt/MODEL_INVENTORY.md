@@ -11,7 +11,9 @@ accounting.
 
 | Layer | Model | One row represents | Materialization |
 | --- | --- | --- | --- |
-| Staging | `stg_activity_events` | One received replay record | View |
+| Staging | `stg_oms_events` | One separately ingested OMS execution event | View |
+| Staging | `stg_settlement_events` | One separately ingested settlement event | View |
+| Staging | `stg_activity_events` | One record in the selected close replay | View |
 | Staging | `stg_historical_prices` | One ticker and valuation date in the selected snapshot | View |
 | Staging | `stg_corporate_actions` | One reviewed corporate-action event | View |
 | Staging | `stg_broker_positions` | One received broker position | View |
@@ -30,7 +32,7 @@ accounting.
 | Mart | `fct_cash_yield_benchmark` | One account-day Treasury cash estimate | Table |
 | Mart | `fct_bank_cash_reconciliation` | One internal/bank account-currency comparison | Table |
 
-The active DAG therefore has eight staging views and ten mart tables. The
+The active DAG therefore has ten staging views and ten mart tables. The
 dividend reconciliation in `snowflake/23_dividend_reconciliation.sql` remains a
 read-only operating report rather than another permanent model.
 
@@ -56,3 +58,8 @@ Tests attached only to the sample and OMS lessons are excluded with those
 lessons. The independent Python control remains part of `scripts/run_replay.py`
 and checks every daily valuation and account balance against a separate Decimal
 calculation.
+
+The current dbt manifest contains 20 models, 54 data tests, two seeds and one
+project hook. Tests under `tests/acceptance` are tagged `fixture` because their
+expected counts belong to the saved portfolio demonstration rather than to an
+arbitrary production delivery.

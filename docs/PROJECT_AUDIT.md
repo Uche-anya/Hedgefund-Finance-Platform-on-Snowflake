@@ -1,150 +1,111 @@
-# Project audit
+# Project status and production gaps
 
-Reviewed 1 October 2026. This document separates working features from the work
-needed for a credible daily fund platform.
+Reviewed 4 October 2026. This is the current status of the repository and the
+Snowflake account, based on the checks completed during the build.
 
-## What works now
+## What is complete
 
-- A pinned Massive price snapshot contains 250,036 rows for 503 tickers.
-- Reviewed ticker changes are applied without changing the saved source files.
-- Real corporate-action data is stored with review evidence and raw lineage.
-- A saved simulation contains 3,200 trades across two accounts and 20 stocks.
-- The replay covers 23 valuation dates and has settlement and dividend events.
-- One instrument seed and eleven active dbt models calculate positions, valuation, obligations, cash, NAV and broker reconciliation.
-- Dividend accrual, confirmation and reconciliation work for one reviewed
-  Mastercard event.
-- The acceptance build passes 45 data tests across 18 models. The complete
-  Python suite passes 224 tests.
-- An independent Decimal calculation matches 920 valuations and 46 NAV rows.
-- dbt uses a dedicated key-pair user. Secrets and generated data are ignored by Git.
+- Four real reference sources are integrated: Massive daily equity prices,
+  Massive corporate actions, ECB FX rates and US Treasury rates.
+- Five fictional operating feeds model data a fund would normally receive from
+  independent systems: OMS executions, settlement confirmations, broker
+  positions, fund-administrator events and bank cash statements.
+- The saved replay contains 3,200 trades across 20 equities, two accounts and 23
+  valuation dates. It includes late and missing settlements, a reviewed dividend,
+  position breaks and a bank-cash break.
+- Snowflake RAW tables retain source payloads and delivery lineage. The dbt graph
+  has 20 active models, 54 data tests and two controlled reference seeds.
+- Instrument history uses stable security IDs and effective dates, including the
+  SQ to XYZ ticker change and a separate XOM successor security.
+- Positions, cash, settlement obligations, valuations, NAV, FX reporting,
+  dividends and broker/bank reconciliations are calculated in Snowflake.
+- An independent Python calculation agrees with 920 valuations and 46 daily NAV
+  balances. The Python suite currently contains 235 tests.
+- Run control records selected deliveries, attempts and status. NAV approval and
+  publication use separate roles and an exact candidate hash.
+- A suspended Snowflake task graph and native dbt project have been exercised in
+  development. Tasks do not approve their own NAV output.
+- Pull requests run local checks and an optional isolated Snowflake clone build.
+- Terraform state is stored in HCP Terraform. Terraform manages the CI and
+  production foundations: roles, OIDC service users, warehouses, monitors, the
+  production database and its schemas.
 
-This is a reproducible development replay. It is not an official accounting
-book, an unattended daily service or a live stream.
+This proves a production-style development replay. It is not evidence that a
+real fund is operating on the platform.
 
-## Important gaps
+## What remains before a daily production run
 
-### 1. Remaining reference data
+### 1. Deploy the production data plane
 
-The replay's 20 stocks now resolve through permanent internal security IDs and
-effective-dated ticker history. The XOM holding-company transition proves the
-mapping can distinguish two securities that used the same ticker. Account and
-broker reference data still need controlled identifiers, and a replay spanning a
-reorganisation will need an explicit position-conversion event.
+`NORTHBRIDGE_PROD` and its access roles exist, but production RAW tables, file
+formats, stages, pipes, dbt project and task graph still need a reviewed release.
+The production GitHub workflow is deliberately disabled until those objects and
+their source credentials are ready.
 
-### 2. Remaining reconciliation coverage
+### 2. Replace local producers with scheduled source hand-offs
 
-A separate prime-broker delivery now produces matched, missing, unexpected,
-quantity-mismatch and late position outcomes. Its calculation and delivery are
-separate from dbt, although it remains simulated rather than independent
-real-world evidence. Cash-balance reconciliation is still outstanding.
+The real reference downloads and fictional operating producers currently run
+from a developer machine. A deployed service must create manifests, upload files
+to controlled stage paths and register completed deliveries. Snowpipe can load
+frequent OMS files; daily sources can use a scheduled load.
 
-### 3. Remaining NAV controls
+### 3. Choose the daily cutoff and activate scheduling
 
-The operational schema now preserves append-only run events, NAV publications
-and restatements. The publisher role cannot update or delete those records, and
-exact retries reuse the same run ID. The workflow still needs a real approver
-identity and policy-driven materiality thresholds; the current exception note is
-explicitly a simulated project control.
+Agree the business timezone, source arrival deadlines, late-data policy and NAV
+review window. Then enable the root task only after a monitored dry run in the
+production environment.
 
-### 4. Daily run control
+### 4. Add operational monitoring
 
-Delivery IDs are pinned in `dbt_project.yml`. A production run needs a run-control
-record with business date, source deliveries, cutoffs, status, timestamps and
-retry history. The loader must reject incomplete or conflicting deliveries and
-allow an exact retry without duplicating records.
+Alert on missing deliveries, failed task nodes, failed dbt tests, reconciliation
+breaks, unapproved NAV candidates and unusual warehouse credit use. Record an
+owner and a safe retry instruction for each alert.
 
-### 5. Remaining service-access work
+### 5. Finish governance operations
 
-dbt, raw ingestion and NAV publication now use separate key-pair roles. The
-current replay and broker loader no longer uses the personal administrator or
-MFA. Key rotation, expiry monitoring, emergency access and deployment-host
-secret management still need an operating procedure.
+Assign data owners, apply the existing classification design, document access
+reviews and key rotation, and test Time Travel or clone-based recovery. Keep
+publisher, transformation and ingestion duties separate.
 
-### 6. Scheduling and monitoring
+### 6. Add accounting only when a source requires it
 
-There is no Snowflake task graph, alerting, service-level objective or operations
-dashboard. The task graph should check source readiness, validate contracts, run dbt, perform independent
-reconciliation, publish only after approval and record every step. Alerts need
-the failed step, business date, affected source and safe retry instruction.
+The current scope is USD listed equities. Stock borrow, margin, tax withholding,
+options, futures and bonds need their own sources and accounting rules before the
+platform can claim to support them. They are later product scope, not defects in
+this equity close.
 
-### 7. Ingestion design
+### 7. Add machine learning after operating history exists
 
-Local PUT/COPY commands are suitable for development. Production can retain
-Snowflake internal named stages, but the producer must authenticate, upload each
-file and notify Snowpipe or rely on a scheduled COPY. File manifests remain
-necessary. Repeated JSON files are micro-batches, even if they arrive every
-minute. Streaming is justified only when the business requires lower latency and
-can operate it reliably.
+The anomaly model is intentionally deferred. Reconciliation outcomes and rule
+violations must first accumulate enough labelled history for time-based training
+and evaluation. Synthetic labels must remain identified as synthetic.
 
-### 8. Accounting coverage
+## Cleanup decisions
 
-The active NAV covers USD equities, trade settlement and one reviewed dividend.
-It does not yet cover opening positions, every dividend, splits, tax withholding,
-fees, stock borrow, margin, FX, subscriptions/redemptions, futures or other asset
-types. Add each with a stated accounting rule and independent control total.
+The following files remain because they serve a clear purpose:
 
-### 9. Data contracts and freshness
+- `data_extraction` reproduces vendor downloads, identity reviews and price
+  repairs.
+- `fund_pipeline` supplies the independent calculation and the original local
+  accounting implementation.
+- `fixtures` provides small, committed inputs for tests and CI.
+- numbered Snowflake SQL files document bootstrap, migration and operational
+  checks. Their current role is indexed in `snowflake/README.md`.
+- old Python and dbt lessons are under `archive`; they are excluded from the
+  active dbt project.
 
-Required fields and pinned counts are tested, but sources have no automated
-freshness rules or versioned external contract. Record expected arrival times,
-schema versions, provider entitlements and late/missing delivery policy.
+Generated data, virtual environments, dbt output, Terraform plans/state, private
+keys and credentials stay outside Git through `.gitignore`.
 
-### 10. Deployment and reproducibility
+## Release definition
 
-There is no CI workflow, container, production dbt target or general Python
-dependency file. Large generated datasets are correctly ignored, but a reviewer
-needs either a small committed fixture or a documented download-and-build path.
-The current working tree also contains several uncommitted milestones; these need
-small, ordered commits before the portfolio is presented.
+A credible production release requires all of the following:
 
-### 11. Performance and cost
-
-The current volumes are small: 250,036 raw prices, 920 active valuations and 46
-NAV rows. Full table rebuilds are reasonable today. Dynamic tables, clustering
-keys and larger warehouses would add cost without evidence of a bottleneck.
-First record query duration, bytes scanned and credits by run. Add incremental
-processing or clustering only after query history shows a real problem. Configure
-auto-suspend, a resource monitor and separate workload warehouses before daily use.
-
-### 12. ML readiness
-
-No ML model is implemented. Start after independent reconciliation creates useful
-features and labels. Use transparent rules as a baseline, then compare an anomaly
-model such as Isolation Forest on an earlier training period and later evaluation
-period. Synthetic anomalies must stay labelled synthetic; a score is not proof
-of fraud or the cause of a break.
-
-### 13. Governance and recovery
-
-Define data retention, Time Travel, cloning, access review, tagging and recovery
-tests. There is no personal customer data in the current sample, so masking is
-not a priority. Lineage and source hashes are already a useful foundation.
-
-## Build order
-
-1. Account and broker reference data.
-2. Independent broker/custodian cash statements and reconciliation exceptions.
-3. Production approval identities and NAV materiality policy.
-4. Parameterised run control and ingestion-key rotation.
-5. Snowflake Tasks orchestration, monitoring, CI and reproducible setup.
-6. Internal-stage file ingestion with Snowpipe when the account setup is ready.
-7. Remaining accounting rules, beginning with all relevant corporate actions.
-8. Performance changes supported by Snowflake query-history evidence.
-9. Anomaly detection after exception labels exist.
-
-## Next milestone
-
-Parameterise the daily run by business date and delivery manifest. The current
-command uses least-privilege service identities, but its delivery IDs remain
-pinned to the January replay configuration.
-
-## Definition of a credible portfolio release
-
-- A clean clone can run a documented small example without private files.
-- CI runs Python and dbt checks against a safe test environment.
-- Every published NAV points to immutable input and calculation versions.
-- A correction produces a visible restatement rather than overwriting history.
-- Independent statements create matched, missing and mismatched exceptions.
-- Daily runs are idempotent, monitored and operated by service roles.
-- Cost and performance decisions are backed by measurements.
-- README claims match what the repository and live Snowflake build can prove.
+- production objects deployed from reviewed code;
+- service identities for ingestion, transformation and publication;
+- a complete delivery manifest for one dry-run business date;
+- dbt and independent control calculations passing;
+- expected reconciliation exceptions reviewed;
+- a NAV candidate approved and published by separate identities;
+- task, failure, recovery and cost evidence retained;
+- the schedule enabled only after the dry run is signed off.
