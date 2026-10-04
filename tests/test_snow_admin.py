@@ -8,6 +8,24 @@ from scripts import snow_admin
 
 
 class SnowAdminTests(unittest.TestCase):
+    def test_deployment_copy_includes_environment_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / 'dbt'
+            for name in ('models', 'tests', 'seeds'):
+                folder = source / name
+                folder.mkdir(parents=True)
+                (folder / 'keep.txt').write_text(name)
+            for name in ('dbt_project.yml', 'dbt_projects_profiles.yml', 'env.yml'):
+                (source / name).write_text(f'{name}: true\n')
+            (source / 'target').mkdir()
+            (source / 'target' / 'manifest.json').write_text('{}')
+
+            deployment = snow_admin.prepare_dbt_source(root)
+
+            self.assertTrue((deployment / 'env.yml').is_file())
+            self.assertFalse((deployment / 'target').exists())
+
     def run_helper(self, cached=None, code=0, arguments=()):
         vault = Mock()
         vault.get_password.return_value = cached

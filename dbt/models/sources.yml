@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw
-    database: NORTHBRIDGE_DEV
+    database: "{{ env_var('DBT_SOURCE_DATABASE', 'NORTHBRIDGE_DEV') }}"
     schema: RAW
     tables:
       - name: corporate_actions
@@ -37,7 +37,7 @@ sources:
         identifier: BANK_CASH_STATEMENTS
         description: Simulated independent bank closing balances.
   - name: operations
-    database: NORTHBRIDGE_DEV
+    database: "{{ env_var('DBT_SOURCE_DATABASE', 'NORTHBRIDGE_DEV') }}"
     schema: OPERATIONS
     tables:
       - name: deliveries

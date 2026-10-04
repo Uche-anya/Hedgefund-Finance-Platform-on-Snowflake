@@ -1,0 +1,97 @@
+name: Project checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  local-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install project dependencies
+        run: python -m pip install -r requirements-ci.txt
+
+      - name: Run Python tests
+        run: python -m unittest discover -s tests
+
+      - name: Check YAML files
+        run: python scripts/check_yaml.py
+
+      - name: Parse dbt project
+        run: dbt parse --project-dir dbt --profiles-dir .github/dbt --target ci
+
+  snowflake-ci:
+    if: github.event_name == 'pull_request' && vars.SNOWFLAKE_CI_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: ci
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_DATABASE: NORTHBRIDGE_CI_PR_${{ github.event.number }}
+      SNOWFLAKE_SCHEMA: OPERATIONS
+      SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_CI
+      SNOWFLAKE_WAREHOUSE: NORTHBRIDGE_CI_WH
+      TEST_PROJECT: NORTHBRIDGE_DBT_PR_${{ github.event.number }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Snowflake CLI
+        uses: snowflakedb/snowflake-actions@v3
+        with:
+          use-oidc: true
+          cli-version: '3.27'
+
+      - name: Test Snowflake connection
+        run: snow connection test -x
+
+      - name: Clone the CI database
+        env:
+          CI_BASE_DATABASE: ${{ vars.SNOWFLAKE_CI_BASE_DATABASE }}
+        run: |
+          case "$CI_BASE_DATABASE" in
+            ''|*[!A-Z0-9_]* ) echo 'SNOWFLAKE_CI_BASE_DATABASE is invalid'; exit 1 ;;
+          esac
+          snow sql -x -q "CREATE OR REPLACE TRANSIENT DATABASE $SNOWFLAKE_DATABASE CLONE $CI_BASE_DATABASE"
+
+      - name: Deploy test dbt project
+        run: |
+          snow dbt deploy "$TEST_PROJECT" \
+            --source ./dbt \
+            --default-target ci \
+            --default-env ci \
+            --no-auto-compile \
+            --dbt-version 1.12.3 \
+            -x
+
+      - name: Build and test models
+        run: |
+          snow dbt execute -x \
+            --env ci \
+            --env-vars "{\"DBT_DATABASE\":\"$SNOWFLAKE_DATABASE\",\"DBT_SOURCE_DATABASE\":\"$SNOWFLAKE_DATABASE\"}" \
+            "$TEST_PROJECT" build --target ci --exclude tag:fixture
+
+      - name: Remove pull-request database
+        if: always()
+        run: snow sql -x -q "DROP DATABASE IF EXISTS $SNOWFLAKE_DATABASE"

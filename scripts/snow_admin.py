@@ -29,7 +29,7 @@ def prepare_dbt_source(root):
     target.mkdir(parents=True)
     for name in ('models', 'tests', 'seeds'):
         shutil.copytree(source / name, target / name)
-    for name in ('dbt_project.yml', 'dbt_projects_profiles.yml'):
+    for name in ('dbt_project.yml', 'dbt_projects_profiles.yml', 'env.yml'):
         shutil.copy2(source / name, target / name)
     return target
 
@@ -77,7 +77,8 @@ def main():
         command = [
             str(snow), 'dbt', 'deploy', 'NORTHBRIDGE_DBT',
             '--source', str(dbt_source),
-            '--default-target', 'prod',
+            '--default-target', 'dev',
+            '--default-env', 'dev',
             '--dbt-version', '1.12.3',
             '--database', 'NORTHBRIDGE_DEV',
             '--schema', 'OPERATIONS',
