@@ -11,7 +11,7 @@
   "price_snapshot": "data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae",
   "price_sha256": "9a0f638ee3cb200e1025b5a88f274d36b4c567b8252ffd5b37d0f1d7fd523bf2",
   "calendar": "calendars/us_equities_2025_01_v1.json",
-  "calendar_sha256": "db08b35ab122d9d38a9a2cd7928f5ae9be6892a68d9c33147f1121e0c7479581",
+  "calendar_sha256": "c0aa054f319d7c97d3c192712899acad16e2690a2094e36ffa28041be3a2e37c",
   "settlement_closed_dates": ["2025-01-01", "2025-01-20"],
   "settlement_calendar_end": "2025-02-04",
   "settlement_sources": [

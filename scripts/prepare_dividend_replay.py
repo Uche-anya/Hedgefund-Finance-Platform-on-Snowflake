@@ -13,7 +13,7 @@ from simulation.multi_day import read_prices
 
 BASE = 'sim-replay-406bbef8179cdbb0a3dd6df3'
 CALENDAR = 'calendars/us_equities_2025_01_to_0207_v1.json'
-CALENDAR_SHA256 = 'c080b0ece3fe37684969576b004605acb3188c599aaf1d56fadc5b25b1d61b3a'
+CALENDAR_SHA256 = '897619d9437824bdc185be7d7c1bc9fb2c095eca771750dd1fcea20d2e8b28a2'
 
 
 def digest(path):

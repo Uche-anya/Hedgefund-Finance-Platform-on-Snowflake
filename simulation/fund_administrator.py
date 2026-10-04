@@ -13,9 +13,10 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def produce(config_path=ROOT / 'config/fund_admin_january.json', output=ROOT / 'data/fund_admin'):
+def produce(config_path=ROOT / 'config/fund_admin_january.json', output=ROOT / 'data/fund_admin',
+            input_root=ROOT):
     config = json.loads(config_path.read_text(encoding='utf-8'))
-    replay = ROOT / config['source_replay']
+    replay = input_root / config['source_replay']
     replay_manifest = json.loads((replay / 'manifest.json').read_text(encoding='utf-8'))
     valid_accounts = set(replay_manifest['config']['accounts'])
     replay_records = [json.loads(line) for line in
