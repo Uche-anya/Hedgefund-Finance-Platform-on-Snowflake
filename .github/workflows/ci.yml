@@ -61,7 +61,7 @@ jobs:
         uses: snowflakedb/snowflake-actions@v3
         with:
           use-oidc: true
-          cli-version: '3.27'
+          cli-version: '3.28.0'
 
       - name: Test Snowflake connection
         run: snow connection test -x
