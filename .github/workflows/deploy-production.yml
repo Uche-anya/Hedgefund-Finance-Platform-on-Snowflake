@@ -1,0 +1,57 @@
+name: Deploy production dbt project
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-dbt-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.SNOWFLAKE_PROD_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_DATABASE: NORTHBRIDGE_PROD
+      SNOWFLAKE_SCHEMA: OPERATIONS
+      SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_PROD_DEPLOY
+      SNOWFLAKE_WAREHOUSE: NORTHBRIDGE_PROD_WH
+      DBT_PROJECT: NORTHBRIDGE_DBT
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Snowflake CLI
+        uses: snowflakedb/snowflake-actions@v3
+        with:
+          use-oidc: true
+          cli-version: '3.28.0'
+
+      - name: Test Snowflake connection
+        run: snow connection test -x
+
+      - name: Deploy reviewed dbt code
+        run: |
+          snow dbt deploy "$DBT_PROJECT" \
+            --source ./dbt \
+            --default-target prod \
+            --default-env prod \
+            --no-auto-compile \
+            --dbt-version 1.12.3 \
+            -x
+
+      - name: Allow the runtime role to execute the project
+        run: |
+          snow sql -x -q "GRANT USAGE ON DBT PROJECT NORTHBRIDGE_PROD.OPERATIONS.$DBT_PROJECT TO ROLE NORTHBRIDGE_DBT_PROD"

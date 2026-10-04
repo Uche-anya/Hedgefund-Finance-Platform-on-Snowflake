@@ -82,10 +82,41 @@ results with no warnings or errors. The cleanup step then dropped
 
 ## Next deployment step
 
-Add a separate production deployment workflow for reviewed merges to `main`.
-It should use its own GitHub environment, OIDC service user and deployment
-role. Deployment updates the production dbt project; the daily Snowflake task
-continues to run under the production runtime role.
+The production deployment workflow is defined in
+`.github/workflows/deploy-production.yml`. It is disabled until the Terraform
+foundations have been applied and the repository variable
+`SNOWFLAKE_PROD_DEPLOY_ENABLED` is set to `true`.
+
+After it is enabled, a reviewed merge to `main` deploys the dbt source to the
+native project in `NORTHBRIDGE_PROD.OPERATIONS`. Deployment does not execute
+the daily build or resume a task. The daily Snowflake task remains a separate
+operational control owned by `NORTHBRIDGE_DBT_PROD`.
+
+The `production` GitHub environment only accepts deployments from `main`. Its
+OIDC service user has the deployment role, while the daily task uses a separate
+runtime role. This stops a deployment workflow from becoming the day-to-day
+data processing identity. GitHub required reviewers should also be enabled
+when the repository plan supports that environment protection rule. On the
+current plan, the disabled deployment switch is the manual release gate.
+
+## Terraform ownership
+
+`terraform/snowflake` manages durable account foundations:
+
+- CI and production roles
+- GitHub OIDC service users
+- warehouses and resource monitors
+- the production database and top-level schemas
+- grants for deployment and runtime
+
+Terraform does not manage dbt relations, raw table DDL, task SQL or the data
+inside `NORTHBRIDGE_CI_BASE`. The CI base is a reviewed Snowflake clone and has
+a different lifecycle from long-lived infrastructure.
+
+Terraform uses a partial S3 backend configuration. Supply an untracked
+`backend.hcl` pointing to a versioned, encrypted bucket before importing or
+applying resources. Pull requests run `terraform fmt` and `terraform validate`
+without opening the remote backend or connecting to Snowflake.
 
 The Snowflake objects are defined in `snowflake/46_ci_environment.sql`. The file
 also creates and removes a smoke-test clone to prove that the CI role can read
