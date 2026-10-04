@@ -46,7 +46,7 @@ Create a GitHub environment named `ci`, then add:
 
 | Kind | Name | Value |
 | --- | --- | --- |
-| Repository secret | `SNOWFLAKE_ACCOUNT` | `gxmgyta-fq45953` |
+| `ci` environment secret | `SNOWFLAKE_ACCOUNT` | `gxmgyta-fq45953` |
 | Repository variable | `SNOWFLAKE_CI_BASE_DATABASE` | `NORTHBRIDGE_CI_BASE` |
 | Repository variable | `SNOWFLAKE_CI_ENABLED` | `true`, but only after Snowflake setup |
 
@@ -73,13 +73,19 @@ The local dbt CLI continues to use `dbt/profiles.yml` and the developer's key.
 The small `.github/dbt/profiles.yml` file only gives `dbt parse` the shape of a
 connection. Its placeholder values are never used to connect.
 
+## Live proof
+
+Pull request 1 ran the complete CI path on 4 October 2026. The local checks
+passed, GitHub authenticated to Snowflake with OIDC, and dbt completed 64 build
+results with no warnings or errors. The cleanup step then dropped
+`NORTHBRIDGE_CI_PR_1` successfully.
+
 ## Next deployment step
 
-The next infrastructure change is to create the CI role, warehouse, base
-database and OIDC service user. After the live pull-request build is proven, add
-a separate production workflow that deploys on merges to `main`. The production
-job will use its own GitHub environment, OIDC user and deployment role; the
-daily Snowflake task will continue to run under the production runtime role.
+Add a separate production deployment workflow for reviewed merges to `main`.
+It should use its own GitHub environment, OIDC service user and deployment
+role. Deployment updates the production dbt project; the daily Snowflake task
+continues to run under the production runtime role.
 
 The Snowflake objects are defined in `snowflake/46_ci_environment.sql`. The file
 also creates and removes a smoke-test clone to prove that the CI role can read
@@ -89,6 +95,7 @@ the snapshot, create dbt relations and clean up its own database. Run it with:
 .\.venv\snowflake-cli\Scripts\python.exe scripts\snow_admin.py --file snowflake\46_ci_environment.sql
 ```
 
-After that succeeds, create the GitHub `ci` environment and repository settings
-listed above. Set `SNOWFLAKE_CI_ENABLED` last, because that switch allows pull
-requests to start spending Snowflake credits.
+The account setup and GitHub `ci` environment are now active. Keep this command
+as the repeatable bootstrap for a new Snowflake account. Set
+`SNOWFLAKE_CI_ENABLED` only after the bootstrap succeeds, because that switch
+allows pull requests to start spending Snowflake credits.
