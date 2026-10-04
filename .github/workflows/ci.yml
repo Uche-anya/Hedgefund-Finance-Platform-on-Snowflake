@@ -37,6 +37,19 @@ jobs:
       - name: Parse dbt project
         run: dbt parse --project-dir dbt --profiles-dir .github/dbt --target ci
 
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.14.5'
+
+      - name: Check Terraform formatting
+        run: terraform -chdir=terraform/snowflake fmt -check -recursive
+
+      - name: Validate Terraform
+        run: |
+          terraform -chdir=terraform/snowflake init -backend=false
+          terraform -chdir=terraform/snowflake validate
+
   snowflake-ci:
     if: github.event_name == 'pull_request' && vars.SNOWFLAKE_CI_ENABLED == 'true'
     runs-on: ubuntu-latest

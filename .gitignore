@@ -17,3 +17,11 @@ snowflake/27_ingest_key_access.sql
 snowflake/32_runner_key_access.sql
 # Generated for this machine by scripts/publisher_key.py
 snowflake/36_publisher_key_access.sql
+
+# Terraform working files and local state configuration
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+backend.hcl
+crash.log
