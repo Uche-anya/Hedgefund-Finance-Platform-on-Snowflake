@@ -1,5 +1,0 @@
-bucket       = "replace-with-your-terraform-state-bucket"
-key          = "northbridge/snowflake/terraform.tfstate"
-region       = "eu-west-2"
-encrypt      = true
-use_lockfile = true

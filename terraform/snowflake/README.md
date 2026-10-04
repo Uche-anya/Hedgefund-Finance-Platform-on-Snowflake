@@ -14,14 +14,23 @@ analytical relations, and the CI base is refreshed as a reviewed clone.
 
 ## State comes first
 
-Do not apply with local state. Copy `backend.hcl.example` to `backend.hcl` and
-point it at a versioned, encrypted S3 bucket with state locking enabled. The
-bucket must be created separately because Terraform cannot safely store the
-state needed to create its own backend.
+Do not apply with local state. This configuration uses HCP Terraform to keep
+one shared, locked state history. Create an HCP Terraform organization and a
+CLI-driven workspace named `northbridge-snowflake`, then log in from this
+computer. In the workspace's **Settings > General**, select **Local** execution
+mode. HCP will store and lock state while Terraform continues to run on this
+computer using the existing Snowflake profile.
 
 ```powershell
-terraform -chdir=terraform/snowflake init -backend-config=backend.hcl
+terraform login
+$env:TF_CLOUD_ORGANIZATION = 'your-hcp-organization'
+$env:TF_WORKSPACE = 'northbridge-snowflake'
+terraform -chdir=terraform/snowflake init -reconfigure
 ```
+
+The HCP token is stored in Terraform's user-level credentials file, outside
+this repository. The organization and workspace are supplied as environment
+variables, so personal HCP account details are not committed to Git.
 
 ## Adopt the existing CI objects
 
@@ -37,8 +46,9 @@ terraform -chdir=terraform/snowflake import snowflake_warehouse.ci '"NORTHBRIDGE
 terraform -chdir=terraform/snowflake import snowflake_schema.ci_dbt '"NORTHBRIDGE_CI_BASE"."DBT_CI"'
 ```
 
-The first plan will also propose the production foundations. Review that plan
-before applying it:
+The first plan will also propose the production foundations. Use local
+execution for this first adoption so it can reuse the existing Snowflake CLI
+profile. Review the saved plan before applying it:
 
 ```powershell
 terraform -chdir=terraform/snowflake plan -out=northbridge.tfplan

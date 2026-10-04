@@ -113,10 +113,11 @@ Terraform does not manage dbt relations, raw table DDL, task SQL or the data
 inside `NORTHBRIDGE_CI_BASE`. The CI base is a reviewed Snowflake clone and has
 a different lifecycle from long-lived infrastructure.
 
-Terraform uses a partial S3 backend configuration. Supply an untracked
-`backend.hcl` pointing to a versioned, encrypted bucket before importing or
-applying resources. Pull requests run `terraform fmt` and `terraform validate`
-without opening the remote backend or connecting to Snowflake.
+Terraform stores shared state in an HCP Terraform workspace named
+`northbridge-snowflake`. The HCP organization is supplied through
+`TF_CLOUD_ORGANIZATION`, so a personal account name is not committed to Git.
+Pull requests run `terraform fmt` and `terraform validate` without opening the
+remote state or connecting to Snowflake.
 
 The Snowflake objects are defined in `snowflake/46_ci_environment.sql`. The file
 also creates and removes a smoke-test clone to prove that the CI role can read
