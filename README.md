@@ -1,143 +1,79 @@
-# Northbridge fund close platform
+# Northbridge equity close
 
-Northbridge is a production-style daily close for a fictional equity hedge fund.
-It brings trades, settlement, market data and independent statements into
-Snowflake; dbt calculates positions, cash and NAV; reconciliation controls expose
-breaks before a separate reviewer can approve publication.
+Northbridge is a portfolio data-engineering project for a fictional equity fund.
+It combines real market reference data with **labelled simulated fund activity**.
+The current calculation covers 502 market sessions from 23 September 2024 to
+23 September 2026. Its NAV is provisional: it is a calculated research result,
+not a published fund NAV or evidence of a real fund.
 
-The project is designed as a realistic portfolio implementation. Real reference
-data is combined with clearly labelled simulated operating data because broker,
-bank and fund-administrator feeds are private and unavailable for a public demo.
+## Project direction
 
-## Current result
+The saved two-year history is the backfill for a daily equity-close pipeline.
+New business-day deliveries must enter the same RAW contracts and the same
+Snowflake/dbt calculation. Each close will pin its exact inputs and code
+version, so a retry reproduces the same result and a late correction creates
+a new close version. Snowpipe handles arriving OMS and settlement files; bulk
+loading remains appropriate for the historical files. We will schedule the
+close only after the input gate, dbt calculation and retry rules work together.
 
-The development replay processes:
+The Snowflake/dbt close is the intended source for reporting. The Python close
+ledger is an independent check until the two calculations reconcile. The
+current result remains provisional until independent evidence and an approval
+path support publication. See [the daily pipeline design](docs/daily_pipeline_design.md).
 
-- 3,200 simulated executions across 20 US equities and two accounts;
-- 23 valuation dates, including a day without trades;
-- 3,168 settlement confirmations, including missing and late cases;
-- 250,036 real daily price rows across 503 tickers;
-- reviewed real corporate actions, ECB FX and US Treasury rates;
-- simulated broker positions, bank balances, investor flows and expenses.
+## What currently runs
 
-The dbt project has 20 models, 54 data tests and two reference seeds. An
-independent Python calculation agrees with 920 valued positions and 46
-account-day NAV balances. The Python suite has 235 tests.
+| Layer | Current implementation |
+| --- | --- |
+| Market reference | 250,036 saved Massive backfill price rows across 503 tickers, plus checked 22 and 23 September deliveries for the 20 traded tickers; saved corporate-action candidates and reviewed security identities |
+| Fund activity | Fictional OMS executions, custodian confirmations, opening subscriptions and dividend cash evidence, identified by scenario `sim-equity-2024-2026-v2` |
+| Snowflake landing | RAW tables with source and delivery lineage; the five-day Snowpipe pilot plus a new OMS file and its next-day settlement file, with 493 older dates per feed loaded by `COPY INTO` |
+| dbt calculation | RAW-derived positions, settled cash, open-trade amounts, dividend balances and provisional NAV |
+| Independent check | Saved Python close compared row by row with dbt positions, cash and NAV |
 
-A read-only analysis pack reports flow-adjusted performance, drawdown, long and
-short exposure, concentration, P&L attribution and operational materiality from
-the same controlled close.
+The 23 September candidate has 19,614 account-security-day positions and
+1,004 account-day NAV rows. Its pinned dbt build passed; the saved Python parity
+check covers the earlier history, not this new day. See
+[the ingestion and calculation path](docs/two_year_snowflake_path.md) for the
+exact route and its limits.
 
-## How the close works
+## Run the current dbt graph
 
-```mermaid
-flowchart LR
-    A[Source deliveries] --> B[Snowflake RAW]
-    B --> C[dbt staging views]
-    C --> D[Positions, cash and obligations]
-    D --> E[Valuation and NAV]
-    E --> F[Broker and bank reconciliation]
-    F --> G[NAV review candidate]
-    G --> H[Human approval]
-    H --> I[Append-only publication]
+From the repository root, with the Snowflake credentials configured:
+
+```powershell
+.\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py build --select +fct_account_nav_daily --exclude tag:fixture --vars "close_request_id: 98e072ac531920d74204970d"
 ```
 
-Every close selects explicit delivery IDs. Missing or incomplete deliveries stop
-the run. Exact retries keep the same run identity and append a new attempt. A NAV
-approval is tied to a hash of the exact candidate, so changed results need a new
-review.
+The `fixture` tests compare against a saved Python result. They are useful when
+reproducing this particular historical scenario, but are not a generic daily
+production gate. [The model inventory](dbt/MODEL_INVENTORY.md) names the active
+tables and views.
 
-## Data sources
+## Current boundary
 
-| Source | Type | Purpose |
-| --- | --- | --- |
-| Massive prices | Real | Daily equity valuation |
-| Massive corporate actions | Real | Dividend and split evidence |
-| ECB FX rates | Real | EUR and GBP reporting views |
-| US Treasury rates | Real | Cash-yield benchmark |
-| OMS and settlement events | Simulated | Trades, positions, cash and obligations |
-| Broker positions | Simulated independent feed | Position reconciliation |
-| Fund administrator events | Simulated independent feed | Investor flows and expenses |
-| Bank statements | Simulated independent feed | Cash reconciliation |
+The earlier 23-day replay, its dbt graph and its Snowflake task were retired.
+The immutable RAW deliveries and operating audit records remain as history.
 
-Simulated sources carry scenario identifiers and simulation flags. They are never
-presented as observations from a real fund.
+The two-year graph is a **historical backfill plus a Snowpipe daily-arrival pilot**.
+Its DEV Task graph has passed manual runs, but the root remains suspended. It is
+not an automated daily close yet. A production run still needs scheduled source
+hand-offs, a continuing closing-price delivery, a scheduled input gate, review of
+held corporate actions, independent bank and broker evidence, and an approval
+path. See [daily operations](docs/daily_operations.md).
 
 ## Repository map
 
 | Path | Purpose |
 | --- | --- |
-| `dbt/` | Active Snowflake transformations, reference seeds and data tests |
-| `snowflake/` | Bootstrap, ingestion, operations, governance and task SQL |
-| `terraform/snowflake/` | CI and production Snowflake foundations |
-| `simulation/` | Fictional OMS event producer |
-| `data_extraction/` | Real-data downloads, identity checks, repairs and assembly |
-| `scripts/` | dbt, Snowflake, replay, publication and Terraform entry points |
-| `fund_pipeline/` | Independent Python accounting control and local prototype |
-| `fixtures/` | Small committed inputs used by tests and CI |
-| `tests/` | Python regression tests |
-| `docs/` | Current design, operation and source notes |
-| `archive/` | Earlier lessons excluded from the active dbt graph |
+| `simulation/` | Fictional OMS and settlement producers |
+| `data_extraction/` | Vendor downloads and reference-data review |
+| `snowflake/` | RAW definitions, ingestion, governance and verification SQL |
+| `dbt/` | Active transformations and tests |
+| `fund_pipeline/` | Independent Python close and other local calculations |
+| `scripts/` | Current ingestion, dbt and verification entry points |
+| `docs/` | Design notes and current operating limits |
 
 Generated datasets, secrets, private keys, dbt output and Terraform state are
-excluded from Git.
-
-## Run the checks
-
-```powershell
-python -m unittest discover -s tests
-python scripts/check_yaml.py
-.\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py parse
-terraform -chdir=terraform/snowflake fmt -check -recursive
-terraform -chdir=terraform/snowflake validate
-```
-
-Run the saved accounting replay with:
-
-```powershell
-python scripts/run_replay.py
-```
-
-Run the active Snowflake models and routine tests with:
-
-```powershell
-.\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py build --exclude tag:fixture
-```
-
-The fixture-tagged acceptance tests assert the exact saved demonstration. They
-are useful for a full replay but do not belong in an arbitrary daily delivery.
-
-## Environments and deployment
-
-| Environment | Current state |
-| --- | --- |
-| Development | Full replay, native dbt project and suspended task graph tested |
-| Pull-request CI | Local checks plus optional isolated Snowflake clone build |
-| Production | Database, schemas, roles, OIDC users, warehouse and monitor provisioned by Terraform |
-
-Production transformations and scheduling are deliberately disabled. The next
-release is a controlled production dry run: deploy RAW migrations, dbt and the
-suspended task graph; land one complete test delivery; exercise failure and
-retry; then approve one test NAV through the separate publisher path.
-
-## Documentation
-
-- [Current status and production gaps](docs/PROJECT_AUDIT.md)
-- [Next milestones](docs/ROADMAP.md)
-- [Daily operating flow](docs/daily_operations.md)
-- [Active dbt model inventory](dbt/MODEL_INVENTORY.md)
-- [CI/CD design](docs/CICD.md)
-- [Snowflake governance](docs/snowflake_governance.md)
-- [Snowflake performance decisions](docs/snowflake_performance.md)
-- [Portfolio performance and control analysis](analysis/README.md)
-- [Source integration summary](docs/final_sources.md)
-- [Snowflake SQL index](snowflake/README.md)
-- [Archived Python lessons](archive/python_lessons/README.md)
-- [Archived dbt lessons](archive/dbt_lessons/README.md)
-
-## Scope
-
-The accounting scope is USD listed equities. The platform does not yet account
-for stock borrow, margin, withholding tax, options, futures or bonds. The anomaly
-model is also deferred until reviewed daily exceptions provide useful labels.
-These are documented extensions rather than claims of current capability.
+excluded from Git. The fund trades and cash events are simulated; the market
+reference data comes from saved provider downloads.

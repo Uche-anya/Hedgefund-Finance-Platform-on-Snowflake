@@ -119,15 +119,10 @@ those names on each run.
 Pull requests run `terraform fmt` and `terraform validate` without opening the
 remote state or connecting to Snowflake.
 
-The Snowflake objects are defined in `snowflake/46_ci_environment.sql`. The file
-also creates and removes a smoke-test clone to prove that the CI role can read
-the snapshot, create dbt relations and clean up its own database. Run it with:
+The current CI infrastructure definitions are in `terraform/snowflake/ci.tf`.
+The CI base database is a reviewed data snapshot, so its clone and refresh
+still need a separate operational procedure.
 
-```powershell
-.\.venv\snowflake-cli\Scripts\python.exe scripts\snow_admin.py --file snowflake\46_ci_environment.sql
-```
-
-The account setup and GitHub `ci` environment are now active. Keep this command
-as the repeatable bootstrap for a new Snowflake account. Set
-`SNOWFLAKE_CI_ENABLED` only after the bootstrap succeeds, because that switch
-allows pull requests to start spending Snowflake credits.
+The account setup and GitHub `ci` environment are active. Set
+`SNOWFLAKE_CI_ENABLED` only after checking the Terraform grants and CI base,
+because that switch allows pull requests to spend Snowflake credits.
