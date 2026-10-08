@@ -1,4 +1,0 @@
-business_date,settlement_id,execution_id,currency,amount,settled_on
-2026-09-14,S001,E001,GBP,1000.00,2026-09-15
-2026-09-14,S002,E002,GBP,330.00,2026-09-16
-2026-09-14,S003,E003,GBP,400.00,2026-09-16
