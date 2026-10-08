@@ -1,30 +1,13 @@
-# Trade simulator
+# Simulated fund activity
 
-## Broker statement
+The current two-year v2 scenario produces fictional OMS executions and
+custodian settlement confirmations. Five dated deliveries per feed were loaded
+through Snowpipe; the remaining historical dates were loaded in bulk.
+See [the two-year Snowflake path](../docs/two_year_snowflake_path.md).
 
-Run `python -m simulation.broker_statement` to create a fictional prime-broker
-position delivery for 30 January 2025. It calculates trade-date positions from
-the saved execution events and does not read a dbt result. The configuration
-injects a wrong quantity, a missing position, an unexpected account position and
-one late account statement. Synthetic truth stays in the manifest instead of the
-statement records.
+`daily_oms.py` and `daily_settlements.py` produce the two-year fund events and
+new daily deliveries. `simulator.py` supplies execution validation shared by
+those producers. `pilot_opening.py` creates the opening subscription evidence.
 
-From the project root:
-
-```powershell
-python -m simulation.simulator
-```
-
-This creates five fictional execution events in data/simulator/. It writes
-local files. A saved file can be uploaded to the internal stage and loaded by
-Snowpipe with `python scripts/load_oms_snowpipe.py <file>`. See
-[the simulator lesson](../docs/simulator.md) for the event fields and behaviour.
-
-For four fictional settlement confirmations against the saved historical trades:
-
-```powershell
-python -m simulation.settlement_simulator
-```
-
-See [the settlement lesson](../docs/settlement_simulator.md) for the deliberately
-unconfirmed trade, cash signs and replay behaviour.
+Every produced fund event is fictional and should retain its scenario ID and
+simulation flag when loaded to Snowflake.

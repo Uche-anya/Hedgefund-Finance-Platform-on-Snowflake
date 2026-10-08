@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "decision_id": "PEP_20251205_APPROVE_01",
+  "event_id": "E1265d74c6ece2a1d84fe33404bceacb822de00c362e40caf43932720e9a586d4",
+  "queue_sha256": "2b11b227580ac4b7f7c244fa85164c0f6c78875042637a67759fa793d1edf156",
+  "decision": "APPROVE",
+  "reviewer": "CHIGGZY (project owner)",
+  "recorded_by": "Codex from the project owner's approval in chat on 2026-10-06",
+  "review_scope": "Simulated fund dividend entitlement only; no cash payment or NAV publication",
+  "reason": "PepsiCo's issuer record agrees with the provider on declaration, record, payment and amount. For this ordinary cash dividend, the 2025-12-05 provider ex-date follows Nasdaq's business-day record-date rule and matches a Frankfurt notice for the same US ISIN. The saved PEP security map and both simulated prior-close positions reconcile to the candidate amounts. The project owner approved using that rule-based date and saved security mapping on 2026-10-06.",
+  "evidence": {
+    "issuer_notice": "https://www.pepsico.com/en/newsroom/press-releases/2025/pepsico-declares-quarterly-dividend",
+    "ex_date_source": "https://listingcenter.nasdaq.com/rulebook/nasdaq/rules/nasdaq-equity-11",
+    "other_venue_ex_date_notice": "https://www.cashmarket.deutsche-boerse.com/cash-en/Stay-Informed/newsroom/Xetra-Frankfurt-Newsboard/XFRA-DIVIDEND-INTEREST-INFORMATION-05.12.2025-US7134481081-4838152",
+    "security_identity": "dbt/seeds/dim_instrument.csv: NB_EQ_0019, PEP, BBG001S695T1; issuer notice names PEP common stock",
+    "account_eligibility": "data/two_year_close/provisional_v2_review_split/positions.csv: 2025-12-04 PEP close, -802 and +2946 shares; agrees with dividend_entitlements.csv",
+    "review_note": "docs/action_reviews/pep_2025-12-05.md",
+    "evidence_packet": "data/two_year_action_review/pep_2025-12-05_evidence_v1/evidence.json",
+    "evidence_packet_sha256": "00ba9370c1335dc54d2767be337ff5c7450b252d331f6cca15e605768617a58c"
+  },
+  "limitations": [
+    "No event-specific US listing ex-date notice was obtained; approval uses the documented Nasdaq normal rule.",
+    "The PEP FIGI reference was captured in January 2025; the approval accepts the saved effective-dated mapping for this fictional scenario.",
+    "There is no independent custodian or bank confirmation of this simulated fund's dividend cash."
+  ]
+}

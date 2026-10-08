@@ -11,15 +11,17 @@ from dbt_key import KEY_PATH, USER, unlock_secret
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['debug', 'parse', 'build'], default='debug', nargs='?')
+    parser.add_argument('command', choices=['debug', 'parse', 'compile', 'build'], default='debug', nargs='?')
     parser.add_argument('--select', help='Optional dbt model selector, for example stg_executions')
     parser.add_argument('--exclude', help='Optional dbt exclusion, for example tag:fixture')
     parser.add_argument('--vars', help='dbt variables as a YAML or JSON string')
     parser.add_argument('--full-refresh', action='store_true',
                         help='Recreate seeds and models whose stored shape has changed')
     args = parser.parse_args()
-    if (args.select or args.exclude or args.full_refresh) and args.command != 'build':
-        parser.error('--select, --exclude and --full-refresh are only supported with build')
+    if (args.select or args.exclude) and args.command not in ('compile', 'build'):
+        parser.error('--select and --exclude require compile or build')
+    if args.full_refresh and args.command != 'build':
+        parser.error('--full-refresh requires build')
 
     root = Path(__file__).resolve().parent.parent
     executable = root / '.venv' / 'dbt' / 'Scripts' / 'dbt.exe'
@@ -38,13 +40,14 @@ def main():
     environment.pop('DBT_ENV_SECRET_SNOWFLAKE_PASSWORD', None)
     environment['DBT_ENV_SECRET_DBT_KEY_PASSPHRASE'] = unlock_secret()
     command = [str(executable), args.command, '--project-dir', 'dbt', '--profiles-dir', 'dbt']
-    if args.command == 'build':
-        command.append('--fail-fast')
+    if args.command in ('compile', 'build'):
+        if args.command == 'build':
+            command.append('--fail-fast')
         if args.full_refresh:
             command.append('--full-refresh')
         if args.select:
             # Tests requiring unselected models wait for the full project build.
-            command.extend(['--select', args.select, '--indirect-selection', 'cautious'])
+            command.extend(['--select', *args.select.split(), '--indirect-selection', 'cautious'])
         if args.exclude:
             command.extend(['--exclude', args.exclude])
         if args.vars:

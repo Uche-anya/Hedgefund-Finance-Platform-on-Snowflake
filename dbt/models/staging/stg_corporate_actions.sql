@@ -1,8 +1,12 @@
 -- Read one load and apply the saved BNY and TEL decisions.
 with actions as (
     select *
-    from {{ source('raw', 'corporate_actions') }}
+    from {{ source('raw', 'corporate_actions') }} a
+    {% if var('close_request_id', '') %}
+    where {{ selected_delivery('corporate_actions', 'a.load_id') }}
+    {% else %}
     where load_id = '{{ var("corporate_action_load_id") }}'
+    {% endif %}
 ),
 
 reviews as (
@@ -13,8 +17,12 @@ reviews as (
         source_file,
         source_row_number,
         loaded_at
-    from {{ source('raw', 'corporate_action_reviews') }}
+    from {{ source('raw', 'corporate_action_reviews') }} r
+    {% if var('close_request_id', '') %}
+    where {{ selected_delivery('corporate_action_reviews', 'r.load_id') }}
+    {% else %}
     where load_id = '{{ var("corporate_action_load_id") }}'
+    {% endif %}
 ),
 
 replacements as (

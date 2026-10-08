@@ -7,6 +7,7 @@ with raw_count as (
 staged_count as (
     select count(*) as records
     from {{ ref('stg_historical_prices') }}
+    where delivery_id = '{{ var("historical_price_delivery_id") }}'
 )
 select
     raw_count.records as raw_records,

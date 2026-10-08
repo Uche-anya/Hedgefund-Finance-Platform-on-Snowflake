@@ -1,0 +1,29 @@
+{
+  "scenario_id": "sim-equity-2024-2026-v2",
+  "business_date": "2026-09-22",
+  "cutoff_at": "2026-09-22T23:59:59Z",
+  "required_tickers": [
+    "AAPL",
+    "AMZN",
+    "MSFT",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "TSLA",
+    "JPM",
+    "BAC",
+    "GS",
+    "V",
+    "MA",
+    "WMT",
+    "COST",
+    "XOM",
+    "CVX",
+    "UNH",
+    "JNJ",
+    "PEP",
+    "KO"
+  ],
+  "oms_manifest": "data/daily_oms/sim-equity-2024-2026-v2/2026-09-22/manifest.json",
+  "price_manifest": "data/daily_prices/correction_b924fbdf0605479eeb5a30f3/manifest.json"
+}

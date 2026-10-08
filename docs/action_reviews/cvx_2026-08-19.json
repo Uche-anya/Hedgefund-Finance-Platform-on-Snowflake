@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "decision_id": "CVX_20260819_HOLD_01",
+  "event_id": "Eb78b356cbe1484565b77080cc45a6ba8c3567f5b31dd32b234822f263059cd7f",
+  "queue_sha256": "2b11b227580ac4b7f7c244fa85164c0f6c78875042637a67759fa793d1edf156",
+  "decision": "HOLD",
+  "recorded_by": "project evidence review",
+  "reason": "Chevron's July 31, 2026 dividend history and earnings release disagree with the provider's July 29 declaration date. Resolve the source field before approving this event; no US-listing event-specific ex-date notice or independent account entitlement has been recorded.",
+  "evidence": {
+    "issuer_dividend_history": "https://chevroncorp.gcs-web.com/stock-information/dividend-history",
+    "issuer_announcement": "https://chevroncorp.gcs-web.com/node/38551",
+    "provider_file": "dividends_0021.json",
+    "provider_row": 1077,
+    "research_packet": "data/two_year_action_review/top12_evidence_v1/review.csv"
+  }
+}

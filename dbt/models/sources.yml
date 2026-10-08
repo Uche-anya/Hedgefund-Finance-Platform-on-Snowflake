@@ -9,9 +9,6 @@ sources:
         identifier: CORPORATE_ACTIONS
       - name: corporate_action_reviews
         identifier: CORPORATE_ACTION_REVIEWS
-      - name: replay_inputs
-        identifier: REPLAY_INPUTS
-        description: Complete saved replay packages, including simulated trades and custodian events.
       - name: oms_events
         identifier: OMS_EVENTS
         description: Execution reports delivered by the OMS event feed and loaded through Snowpipe.
@@ -35,7 +32,13 @@ sources:
         description: Simulated investor flows and fund expense records.
       - name: bank_cash_statements
         identifier: BANK_CASH_STATEMENTS
-        description: Simulated independent bank closing balances.
+        description: Simulated bank closing balances; generated test data, not independent bank evidence.
+      - name: dividend_payment_events
+        identifier: DIVIDEND_PAYMENT_EVENTS
+        description: Custodian dividend cash confirmations, including fictional pilot events.
+      - name: two_year_reporting
+        identifier: TWO_YEAR_REPORTING
+        description: Versioned provisional account-day and position-day extracts from the Python close.
   - name: operations
     database: "{{ env_var('DBT_SOURCE_DATABASE', 'NORTHBRIDGE_DEV') }}"
     schema: OPERATIONS
@@ -43,3 +46,6 @@ sources:
       - name: deliveries
         identifier: DELIVERIES
         description: Immutable receipt and row-count evidence for source deliveries.
+      - name: close_inputs
+        identifier: CLOSE_INPUTS
+        description: Exact deliveries selected for one provisional close request.

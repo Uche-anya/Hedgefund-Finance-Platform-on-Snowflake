@@ -28,6 +28,8 @@ LOADERS = {
     'fund_admin': ('events.jsonl', 'FUND_ADMIN_EVENTS', 'FUND_ADMIN_STAGE', 'REFERENCE_JSON'),
     'bank_cash': ('balances.jsonl', 'BANK_CASH_STATEMENTS',
                   'BANK_CASH_STAGE', 'REFERENCE_JSON'),
+    'dividend_payments': ('payments.jsonl', 'DIVIDEND_PAYMENT_EVENTS',
+                          'DIVIDEND_PAYMENT_STAGE', 'REFERENCE_JSON'),
 }
 
 
@@ -47,6 +49,9 @@ def deliveries(root, config_path):
         if root.resolve() not in manifest_path.parents:
             raise ValueError(f'Manifest is outside the project: {name}')
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        manifest_delivery = manifest.get('delivery_id', manifest.get('load_id'))
+        if manifest_delivery != source['delivery_id']:
+            raise ValueError(f'{name} delivery ID differs from its manifest')
         path = manifest_path.parent / file_name
         if sha256(path) != manifest['files'][file_name]:
             raise ValueError(f'{name} file differs from its manifest')
@@ -75,6 +80,7 @@ def connect():
         account='gxmgyta-fq45953', user=USER, private_key=private_key,
         authenticator='SNOWFLAKE_JWT', role='NORTHBRIDGE_INGEST',
         warehouse='COMPUTE_WH', database='NORTHBRIDGE_DEV', schema='RAW',
+        autocommit=False,
         session_parameters={'QUERY_TAG': 'northbridge_daily_ingestion'})
     del private_key, key
     return connection
@@ -85,7 +91,7 @@ def load(cursor, item):
     for value in (delivery, item['table'], item['stage'], item['format']):
         if not SAFE_NAME.fullmatch(value):
             raise ValueError(f'Unsafe Snowflake name: {value}')
-    local_path = item['path'].resolve().as_posix()
+    local_path = item['path'].resolve().as_posix().replace("'", "''")
     cursor.execute(
         f"PUT 'file:///{local_path}' @NORTHBRIDGE_DEV.RAW.{item['stage']}/{delivery}/ "
         'AUTO_COMPRESS=TRUE OVERWRITE=FALSE')
@@ -134,7 +140,7 @@ def load(cursor, item):
             'copy_result': [list(row) for row in copy_result]}
 
 
-def run(config_path=ROOT / 'config/controlled_replay_february.json', root=ROOT):
+def run(config_path, root=ROOT):
     inputs = deliveries(root, config_path)
     record = {'run_id': uuid4().hex, 'started_at': datetime.now(timezone.utc).isoformat(),
               'status': 'RUNNING', 'loads': []}
@@ -170,7 +176,6 @@ def run(config_path=ROOT / 'config/controlled_replay_february.json', root=ROOT):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config', type=Path,
-                        default=ROOT / 'config/controlled_replay_february.json')
+    parser.add_argument('--config', type=Path, required=True)
     args = parser.parse_args()
     raise SystemExit(run(args.config.resolve()))

@@ -1,4 +1,0 @@
-version: 2
-models:
-  - name: fct_dividend_accruals
-    description: Gross dividend entitlements for actions approved by operations. Payment confirmations are handled separately in daily cash.

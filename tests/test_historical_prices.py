@@ -16,6 +16,18 @@ def response(symbol):
 
 
 class HistoricalPricesTests(unittest.TestCase):
+    def test_one_day_download_requests_only_that_date(self):
+        payload = json.dumps(response("AAPL")).encode()
+        with tempfile.TemporaryDirectory() as temp:
+            with patch("data_extraction.historical_prices.fetch", return_value=payload) as fetch:
+                folder = download(Path(temp), "test-secret", symbols=["AAPL"],
+                                  start="2025-01-06", end="2025-01-06")
+            fetch.assert_called_once_with("AAPL", "test-secret",
+                                          "2025-01-06", "2025-01-06")
+            request = json.loads((folder / "request.json").read_text())
+            self.assertEqual(request["symbols"], ["AAPL"])
+            self.assertEqual(request["start"], request["end"])
+
     def test_saves_original_responses_and_manifest_without_key(self):
         payloads = [json.dumps(response(symbol)).encode() for symbol in ("AAPL", "AMZN")]
         with tempfile.TemporaryDirectory() as temp:

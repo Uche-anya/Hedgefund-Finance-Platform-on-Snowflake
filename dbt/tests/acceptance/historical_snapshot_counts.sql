@@ -5,6 +5,7 @@ select
     count(*) as records,
     count(distinct universe_ticker) as tickers
 from {{ ref('stg_historical_prices') }}
+where delivery_id = '{{ var("historical_price_delivery_id") }}'
 having count(*) <> 250036
    or count(distinct universe_ticker) <> 503
 

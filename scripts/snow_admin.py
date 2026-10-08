@@ -27,7 +27,7 @@ def prepare_dbt_source(root):
     if target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True)
-    for name in ('models', 'tests', 'seeds'):
+    for name in ('models', 'tests', 'seeds', 'macros'):
         shutil.copytree(source / name, target / name)
     for name in ('dbt_project.yml', 'dbt_projects_profiles.yml', 'env.yml'):
         shutil.copy2(source / name, target / name)

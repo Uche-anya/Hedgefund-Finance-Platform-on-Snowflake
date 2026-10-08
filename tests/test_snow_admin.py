@@ -12,7 +12,7 @@ class SnowAdminTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             source = root / 'dbt'
-            for name in ('models', 'tests', 'seeds'):
+            for name in ('models', 'tests', 'seeds', 'macros'):
                 folder = source / name
                 folder.mkdir(parents=True)
                 (folder / 'keep.txt').write_text(name)
@@ -24,6 +24,7 @@ class SnowAdminTests(unittest.TestCase):
             deployment = snow_admin.prepare_dbt_source(root)
 
             self.assertTrue((deployment / 'env.yml').is_file())
+            self.assertTrue((deployment / 'macros/keep.txt').is_file())
             self.assertFalse((deployment / 'target').exists())
 
     def run_helper(self, cached=None, code=0, arguments=()):

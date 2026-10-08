@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: int_market_days
+    description: Market dates shared by the cash and dividend calculations.
+  - name: int_trade_obligations
+    description: Active executions with their expected cash movement and any confirmed settlement.

@@ -1,4 +1,4 @@
--- Saved four-message lesson. Run through Snowflake CLI for local PUT support.
+-- Set up the RAW table and stage used by settlement ingestion.
 USE ROLE SYSADMIN;
 USE WAREHOUSE COMPUTE_WH;
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS (
@@ -14,26 +14,3 @@ CREATE STAGE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS_STAGE
 USE ROLE SECURITYADMIN;
 GRANT SELECT ON TABLE NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS TO ROLE NORTHBRIDGE_DBT_DEV;
 USE ROLE SYSADMIN;
-
-PUT 'file://C:/Users/UCHE/Desktop/Hedgefund-Finance-Pipeline-on-Snowflake/data/simulator_settlements/a98ed87facdf46f6be0fc923d59b5975/*.jsonl'
-    @NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS_STAGE/a98ed87facdf46f6be0fc923d59b5975/
-    AUTO_COMPRESS = TRUE OVERWRITE = FALSE;
-COPY INTO NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS
-    (payload, delivery_id, source_file, source_row_number)
-FROM (
-    SELECT t.$1, 'a98ed87facdf46f6be0fc923d59b5975',
-        METADATA$FILENAME, METADATA$FILE_ROW_NUMBER
-    FROM @NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS_STAGE/a98ed87facdf46f6be0fc923d59b5975/ t
-)
-FILES = (
-    'sim-settlement-6eee8ae3b0455750a4a8bb356ce98496.jsonl.gz',
-    'sim-settlement-48b9f16add3058c09ad8aea77db27e4a.jsonl.gz',
-    'sim-settlement-526a182d387a5c83a10d7fff07bfebbc.jsonl.gz',
-    'sim-settlement-4506f2cbe4195ad48ee21da47368db4c.jsonl.gz'
-)
-FILE_FORMAT = (FORMAT_NAME = 'NORTHBRIDGE_DEV.RAW.SETTLEMENT_JSON')
-ON_ERROR = ABORT_STATEMENT FORCE = FALSE;
-
-SELECT COUNT(*) AS rows_loaded, COUNT(DISTINCT payload:event_id::varchar) AS events
-FROM NORTHBRIDGE_DEV.RAW.SETTLEMENT_EVENTS
-WHERE delivery_id = 'a98ed87facdf46f6be0fc923d59b5975';

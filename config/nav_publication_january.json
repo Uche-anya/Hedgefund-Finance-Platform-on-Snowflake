@@ -1,8 +1,0 @@
-{
-  "business_date": "2025-01-30",
-  "scenario_id": "sim-replay-406bbef8179cdbb0a3dd6df3",
-  "replay_delivery_id": "sim-dividend-a48996d29c0473a090db3b9f",
-  "price_delivery_id": "fb25ddd9838840488e4c8b971ff7e0ae",
-  "broker_delivery_id": "sim-broker-42a53a52c3913f138bf0ba35",
-  "exception_review_note": "SIMULATED CONTROL: known broker breaks are test fixtures; the internal Decimal calculation matched all NAV rows"
-}

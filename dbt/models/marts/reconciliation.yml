@@ -1,5 +1,0 @@
-version: 2
-
-models:
-  - name: fct_position_reconciliation
-    description: Internal and broker trade-date positions compared at account, security, currency and statement date grain.

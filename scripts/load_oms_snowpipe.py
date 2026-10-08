@@ -77,7 +77,7 @@ def private_key():
     return pem
 
 
-def connect():
+def connect(query_tag='northbridge_oms_snowpipe'):
     import snowflake.connector
 
     pem = private_key()
@@ -97,7 +97,7 @@ def connect():
         warehouse='COMPUTE_WH',
         database='NORTHBRIDGE_DEV',
         schema='RAW',
-        session_parameters={'QUERY_TAG': 'northbridge_oms_snowpipe'},
+        session_parameters={'QUERY_TAG': query_tag},
     )
     del der
     return connection

@@ -1,5 +1,3 @@
--- Run in Snowsight, in order. Live execution is not yet verified.
--- SYSADMIN owns this initial development database.
 USE ROLE SYSADMIN;
 
 CREATE DATABASE IF NOT EXISTS NORTHBRIDGE_DEV;

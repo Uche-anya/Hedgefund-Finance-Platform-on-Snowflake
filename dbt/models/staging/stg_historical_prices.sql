@@ -35,5 +35,19 @@ select
     source_file,
     source_row_number,
     loaded_at
-from {{ source('raw', 'historical_prices') }}
+from {{ source('raw', 'historical_prices') }} raw
+{% if var('close_request_id', '') %}
+where {{ selected_delivery('historical_prices', 'raw.delivery_id') }}
+   or {{ selected_delivery('daily_prices', 'raw.delivery_id') }}
+{% elif target.name == 'prod' %}
+    {{ exceptions.raise_compiler_error('A production close needs close_request_id') }}
+{% else %}
 where delivery_id = '{{ var("historical_price_delivery_id") }}'
+   or delivery_id in (
+       select delivery_id
+       from {{ source('operations', 'deliveries') }}
+       where source_name = 'daily_prices'
+         and delivery_status = 'READY'
+         and expected_rows = received_rows
+   )
+{% endif %}

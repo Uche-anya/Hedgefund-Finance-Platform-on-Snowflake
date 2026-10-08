@@ -19,4 +19,5 @@ select
     source_file,
     source_row_number,
     loaded_at
-from {{ source('raw', 'settlement_events') }}
+from {{ source('raw', 'settlement_events') }} raw
+where {{ selected_delivery('settlement_events', 'raw.delivery_id') }}

@@ -1,64 +1,25 @@
 # dbt project
 
-dbt runs locally and sends the model SQL to Snowflake. The same model graph is
-used for routine processing and for the saved 23-day acceptance fixture.
+The active models calculate the two-year provisional equity close from RAW
+events, historical prices and reviewed action decisions. See
+[the model inventory](MODEL_INVENTORY.md) and
+[the Snowflake path](../docs/two_year_snowflake_path.md).
 
-## Active scope
-
-Normal dbt commands read `models` and `tests`. The project contains:
-
-- an effective-dated instrument seed, an approved-actions seed and eight staging views;
-- ten tables covering accounting, reporting conversion, rate analytics and reconciliation;
-- reusable controls for contracts, row preservation and accounting identities;
-- fixture checks for the pinned January input and its deliberate exceptions.
-
-See [MODEL_INVENTORY.md](MODEL_INVENTORY.md) for each model's grain and why the
-earlier lessons are excluded.
-
-The old sample and OMS lessons are preserved under `archive/dbt_lessons`. dbt
-does not parse or rebuild them.
-
-## Authentication
-
-The helper uses the dedicated Snowflake user and encrypted key described in
-[KEY_AUTH.md](KEY_AUTH.md). It does not prompt for the Snowflake password.
+dbt runs locally and sends its SQL to Snowflake. The helper uses the dedicated
+encrypted dbt key and does not prompt for the Snowflake password.
 
 From the repository root:
 
 ```powershell
 .\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py debug
-.\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py build --exclude tag:fixture
+.\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py build --select +fct_account_nav_daily --exclude tag:fixture
 ```
 
-The routine command excludes expectations tied to one saved replay. Use `build`,
-rather than only `run`, so reusable data controls execute after their models.
-The helper disables secondary roles and uses the `NORTHBRIDGE_DBT_DEV` role.
+The second command builds the selected NAV model and its parents: the source
+staging views, market-day and trade-obligation views, dated instrument seed,
+review-decision seed, positions, cash and dividend balances. `build` also runs
+selected data tests. The saved Python close is independent comparison evidence;
+it is not an input to this NAV.
 
-A scheduler supplies the delivery IDs and processing dates for each run through
-`--vars`. The values in `dbt_project.yml` are the saved development fixture. For
-example:
-
-```powershell
-.\.venv\dbt\Scripts\python.exe scripts/dbt_dev.py build `
-  --exclude tag:fixture `
-  --vars '{"replay_delivery_id":"delivery-from-today"}'
-```
-
-To run the complete replay, including key-authenticated ingestion, dbt tests and
-both independent Python checks:
-
-```powershell
-python scripts/run_replay.py
-```
-
-## Current result
-
-The live build contains two seeds and eighteen models. The
-instrument-master build produced 920 daily position valuations and 46 account-day
-NAV rows. The broker model produces 41 comparison rows and three position
-exceptions. Independent Python checks confirm the financial values and the
-hidden reconciliation truth separately.
-
-The model and control layout is suitable for scheduled runs. The saved replay
-still demonstrates the workflow; scheduling, alerting and deployment-host secret
-management remain deployment work.
+The two-year backfill and new business days use this same close graph. The
+DEV Task graph has been run manually; its root is still unscheduled.

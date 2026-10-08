@@ -32,7 +32,7 @@ folder and lets the scripts import their shared functions.
 | check_*identity.py, check_*identities.py, check_ticker_changes.py | Save dated security reference evidence |
 | repair_*.py | Build the reviewed ticker histories |
 | assemble_prices.py | Combine the saved snapshot and approved repairs |
-| market_prices.py, fx_rates.py | Earlier EODHD sample and ECB FX downloaders |
+| prepare_daily_prices.py | Prepare a checked new-day price package |
 
 Examples:
 

@@ -133,7 +133,7 @@ def write_json(path, data):
     temporary.replace(path)
 
 
-def download(root, api_key, symbols=None, resume=None):
+def download(root, api_key, symbols=None, resume=None, start=None, end=None):
     if not api_key.strip():
         raise ValueError("An API key is required")
     if resume:
@@ -147,9 +147,18 @@ def download(root, api_key, symbols=None, resume=None):
                 raise ValueError("Saved request contains an invalid ticker")
     else:
         symbols = list(symbols) if symbols is not None else read_symbols()
+        start = start or START
+        end = end or END
+        if date.fromisoformat(start) > date.fromisoformat(end):
+            raise ValueError("Start date follows end date")
+        if not symbols or len(symbols) != len(set(symbols)):
+            raise ValueError("Ticker list is empty or contains duplicates")
+        for symbol in symbols:
+            if not re.fullmatch(r"[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?", symbol):
+                raise ValueError(f"Invalid ticker: {symbol}")
         folder = root / uuid4().hex
         folder.mkdir(parents=True, exist_ok=False)
-        plan = {"symbols": symbols, "start": START, "end": END}
+        plan = {"symbols": symbols, "start": start, "end": end}
         if UNIVERSE.exists():
             (folder / "stock_universe.csv").write_bytes(UNIVERSE.read_bytes())
         write_json(folder / "request.json", plan)
@@ -218,14 +227,31 @@ def download(root, api_key, symbols=None, resume=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--resume", type=Path, help="Continue a previously started snapshot folder")
+    parser.add_argument("--day", help="Fetch one market date (YYYY-MM-DD)")
+    parser.add_argument("--symbols-config", type=Path,
+                        help="JSON scenario file containing the tickers to fetch")
     args = parser.parse_args()
+    if args.resume and (args.day or args.symbols_config):
+        parser.error("--resume uses the dates and symbols saved in its request.json")
+    if bool(args.day) != bool(args.symbols_config):
+        parser.error("--day and --symbols-config must be used together")
+    symbols = None
+    if args.day:
+        try:
+            requested_day = date.fromisoformat(args.day).isoformat()
+        except ValueError:
+            parser.error("--day must be a valid YYYY-MM-DD date")
+        config = json.loads(args.symbols_config.read_text(encoding="utf-8"))
+        symbols = config["tickers"]
     key = os.environ.get("MASSIVE_API_KEY")
     if not key:
         key = getpass("Massive API key (hidden): ")
 
     output_folder = Path(__file__).resolve().parents[1] / "data" / "historical_prices"
     try:
-        folder = download(output_folder, key, resume=args.resume)
+        folder = download(output_folder, key, symbols=symbols, resume=args.resume,
+                          start=requested_day if args.day else None,
+                          end=requested_day if args.day else None)
     except (ValueError, RuntimeError) as error:
         message = f"Download stopped: {error}. Any partial folder has no completion manifest."
         raise SystemExit(message) from None

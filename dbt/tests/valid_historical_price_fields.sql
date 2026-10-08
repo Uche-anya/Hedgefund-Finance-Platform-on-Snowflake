@@ -19,7 +19,10 @@ where valuation_date is null
 
       or coalesce(price_basis, '') <> 'unadjusted'
 
-      or coalesce(source_system, '') <> 'massive'
+      or coalesce(source_system, '') not in (
+          'massive'
+          {% if target.name == 'dev' %}, 'simulated_price_correction'{% endif %}
+      )
 
       or coalesce(identity_status, '') not in ('reviewed_ticker_transition', 'provider_ticker_only')
 
