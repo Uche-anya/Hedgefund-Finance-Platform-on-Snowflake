@@ -3,15 +3,12 @@ northbridge:
   outputs:
     dev:
       type: snowflake
-      account: "{{ env_var('NORTHBRIDGE_SNOWFLAKE_ACCOUNT', 'not_configured') }}"
-      user: "{{ env_var('NORTHBRIDGE_SNOWFLAKE_USER', 'not_configured') }}"
-      authenticator: snowflake_jwt
-      private_key_path: "{{ env_var('NORTHBRIDGE_DBT_KEY_PATH', '') }}"
-      private_key_passphrase: "{{ env_var('DBT_ENV_SECRET_DBT_KEY_PASSPHRASE', '') }}"
+      account: gxmgyta-fq45953
+      user: NORTHBRIDGE_DBT
       role: NORTHBRIDGE_DBT_DEV
-      database: NORTHBRIDGE_DEV
       warehouse: COMPUTE_WH
+      database: NORTHBRIDGE_DEV
       schema: DBT_DEV
       threads: 1
-      client_session_keep_alive: false
-      query_tag: northbridge_dbt_learning
+      private_key_path: "{{ env_var('NORTHBRIDGE_DBT_KEY_PATH') }}"
+      query_tag: northbridge_positions_dev

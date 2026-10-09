@@ -1,26 +1,16 @@
+data/
+.secrets/
+.venv/
+.cache/
+.env
+.env.*
 __pycache__/
 *.pyc
-.venv/
-.env
-.secrets/
-data/
 dbt/target/
 dbt/logs/
 dbt/dbt_packages/
-
-.env.*
-# Generated for this machine by scripts/dbt_key.py
-snowflake/07_dbt_key_access.sql
-# Generated for this machine by scripts/ingest_key.py
-snowflake/27_ingest_key_access.sql
-# Generated for this machine by scripts/runner_key.py
-snowflake/32_runner_key_access.sql
-# Generated for this machine by scripts/publisher_key.py
-snowflake/36_publisher_key_access.sql
-
-# Terraform working files and local state configuration
+dbt/.user.yml
 .terraform/
 *.tfstate
 *.tfstate.*
 *.tfplan
-crash.log

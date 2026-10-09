@@ -1,0 +1,63 @@
+-- Run once with a role allowed to create objects in NORTHBRIDGE_DEV.RAW.
+-- Keep raw JSON intact. Business rules belong downstream.
+USE ROLE SYSADMIN;
+
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS (
+    payload VARIANT,
+    source_file VARCHAR,
+    source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_EVENTS (
+    payload VARIANT,
+    source_file VARCHAR,
+    source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- A zero-row delivery still gets a registry entry, although it adds no event rows.
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES (
+    delivery_id VARCHAR,
+    source_name VARCHAR,
+    business_date DATE,
+    scenario_id VARCHAR,
+    expected_rows NUMBER,
+    file_sha256 VARCHAR,
+    stage_path VARCHAR,
+    status VARCHAR,
+    registered_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(),
+    submitted_at TIMESTAMP_LTZ
+);
+
+CREATE FILE FORMAT IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_JSON
+    TYPE = JSON
+    COMPRESSION = NONE;
+
+CREATE STAGE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_LANDING
+    FILE_FORMAT = NORTHBRIDGE_DEV.RAW.DAILY_JSON;
+
+-- Internal-stage Snowpipe is triggered by the insertFiles API.
+CREATE PIPE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_OMS_PIPE
+    AUTO_INGEST = FALSE
+    AS COPY INTO NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS
+        (payload, source_file, source_row_number)
+    FROM (
+        SELECT t.$1, METADATA$FILENAME, METADATA$FILE_ROW_NUMBER
+        FROM @NORTHBRIDGE_DEV.RAW.DAILY_LANDING/oms/ t
+    )
+    FILE_FORMAT = (FORMAT_NAME = NORTHBRIDGE_DEV.RAW.DAILY_JSON)
+    PATTERN = '.*[.]jsonl'
+    ON_ERROR = SKIP_FILE;
+
+CREATE PIPE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_PIPE
+    AUTO_INGEST = FALSE
+    AS COPY INTO NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_EVENTS
+        (payload, source_file, source_row_number)
+    FROM (
+        SELECT t.$1, METADATA$FILENAME, METADATA$FILE_ROW_NUMBER
+        FROM @NORTHBRIDGE_DEV.RAW.DAILY_LANDING/settlements/ t
+    )
+    FILE_FORMAT = (FORMAT_NAME = NORTHBRIDGE_DEV.RAW.DAILY_JSON)
+    PATTERN = '.*[.]jsonl'
+    ON_ERROR = SKIP_FILE;

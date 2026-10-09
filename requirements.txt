@@ -1,0 +1,4 @@
+snowflake-connector-python==4.8.0
+snowflake-ingest==1.0.13
+cryptography==50.0.2
+keyring==25.7.0

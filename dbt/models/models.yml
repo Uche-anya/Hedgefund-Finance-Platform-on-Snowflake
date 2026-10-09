@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: stg_executions
+    columns:
+      - name: execution_id
+        data_tests:
+          - not_null
+          - unique
+      - name: quantity
+        data_tests:
+          - not_null
+      - name: execution_price
+        data_tests:
+          - not_null
+
+  - name: stg_prices
+    columns:
+      - name: close_price
+        data_tests:
+          - not_null
+
+  - name: fct_position_daily
+    columns:
+      - name: close_price
+        data_tests:
+          - not_null
+      - name: market_value
+        data_tests:
+          - not_null
+
+  - name: stg_settlements
+    columns:
+      - name: execution_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: stg_opening_cash
+    columns:
+      - name: account_id
+        data_tests:
+          - not_null
+          - unique
+      - name: opening_cash
+        data_tests:
+          - not_null
+
+  - name: fct_nav_daily
+    columns:
+      - name: nav_usd
+        data_tests:
+          - not_null

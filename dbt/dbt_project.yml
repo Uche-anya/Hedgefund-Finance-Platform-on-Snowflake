@@ -1,45 +1,17 @@
-﻿name: northbridge
-version: '1.0.0'
+name: northbridge
+version: '1.0'
 config-version: 2
 profile: northbridge
-require-dbt-version: ['>=1.12.2', '<1.13.0']
+
 model-paths: ['models']
 test-paths: ['tests']
-seed-paths: ['seeds']
+
 on-run-start:
   - 'use secondary roles none'
-flags:
-  send_anonymous_usage_stats: false
-vars:
-  corporate_action_load_id: "{{ env_var('DBT_CORPORATE_ACTION_LOAD_ID', '890be0cfdcf2151ebb4aab47f0d53cd9') }}"
-  historical_price_delivery_id: "{{ env_var('DBT_HISTORICAL_PRICE_DELIVERY_ID', 'fb25ddd9838840488e4c8b971ff7e0ae') }}"
-  comparison_ledger_id: "{{ env_var('DBT_COMPARISON_LEDGER_ID', 'TWO_YEAR_REVIEW_003') }}"
-  scenario_id: "{{ env_var('DBT_SCENARIO_ID', 'sim-equity-2024-2026-v2') }}"
+
 models:
   northbridge:
-    +materialized: view
+    staging:
+      +materialized: view
     marts:
       +materialized: table
-seeds:
-  northbridge:
-    dim_instrument:
-      +column_types:
-        security_id: varchar
-        instrument_version_id: varchar
-        ticker: varchar
-        valid_from: date
-        valid_to: date
-        is_current: boolean
-        provider_cik: varchar
-        reviewed_issuer_cik: varchar
-        predecessor_security_id: varchar
-    approved_corporate_actions:
-      +column_types:
-        event_id: varchar
-        reviewed_record_date: date
-        review_id: varchar
-    reviewed_action_decisions:
-      +column_types:
-        event_id: varchar
-        decision: varchar
-        review_id: varchar
