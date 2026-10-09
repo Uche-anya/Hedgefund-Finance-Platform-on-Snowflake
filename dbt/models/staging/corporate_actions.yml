@@ -1,4 +1,0 @@
-version: 2
-models:
-  - name: stg_corporate_actions
-    description: Dividends and splits from one load, with the BNY exclusions and TEL replacement applied. Account eligibility still needs checking.

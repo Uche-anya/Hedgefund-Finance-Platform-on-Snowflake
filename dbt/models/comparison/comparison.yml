@@ -1,7 +1,0 @@
-version: 2
-
-models:
-  - name: cmp_python_account_day
-    description: Saved Python account-day close used only for parity checks.
-  - name: cmp_python_position_day
-    description: Saved Python position-day close used only for parity checks.

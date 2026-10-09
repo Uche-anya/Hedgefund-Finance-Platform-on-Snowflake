@@ -1,7 +1,0 @@
-{
-  "source_url": "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv",
-  "downloaded_at_utc": "2026-09-22T11:36:52.878329+00:00",
-  "sha256": "8e8c5a9aa27079a1feb6f92f9d56c5ad7a2084263a66d4191c54705a5b77c2ed",
-  "ticker_count": 503,
-  "description": "Community-maintained S&P 500 constituent list, frozen as project universe; not historical membership or an official index feed."
-}

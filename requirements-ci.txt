@@ -1,2 +1,0 @@
--r requirements-dbt.txt
-PyYAML==6.0.3

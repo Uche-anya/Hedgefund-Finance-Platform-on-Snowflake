@@ -1,4 +1,0 @@
-version: 2
-models:
-  - name: stg_historical_prices
-    description: Typed unadjusted daily bars. Field requirements are checked in valid_historical_price_fields; universe ticker is not a permanent security ID.
