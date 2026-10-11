@@ -20,8 +20,6 @@ def prepare(price_csv, data_dir, business_date):
     folder = data_dir / "daily_prices" / MARKET / day
     data_file = folder / "prices.jsonl"
     manifest_file = folder / "manifest.json"
-    source_hash = hashlib.sha256(price_csv.read_bytes()).hexdigest()
-    delivery_id = "massive-prices-{}-{}".format(day.replace("-", ""), source_hash[:12])
 
     rows = {}
     with price_csv.open(newline="", encoding="utf-8") as handle:
@@ -41,19 +39,26 @@ def prepare(price_csv, data_dir, business_date):
                     raise ValueError("Nonpositive close for {}".format(ticker))
             except InvalidOperation:
                 raise ValueError("Invalid close for {}".format(ticker))
-            rows[ticker] = row
+            # Request IDs belong to the saved provider response, not to a price.
+            rows[ticker] = {
+                "valuation_date": day,
+                "universe_ticker": ticker,
+                "currency": "USD",
+                "close_price": format(close.normalize(), "f"),
+                "price_basis": "unadjusted",
+                "source_system": MARKET,
+            }
     if not rows:
         raise ValueError("No prices for {}".format(day))
 
     lines = [json.dumps(rows[ticker], sort_keys=True) + "\n" for ticker in sorted(rows)]
     contents = "".join(lines).encode("utf-8")
     file_hash = hashlib.sha256(contents).hexdigest()
+    delivery_id = "massive-prices-{}-{}".format(day.replace("-", ""), file_hash[:12])
     manifest = {
         "business_date": day,
         "delivery_id": delivery_id,
         "source_system": MARKET,
-        "source_file": str(price_csv),
-        "source_sha256": source_hash,
         "record_count": len(rows),
         "files": {"prices.jsonl": file_hash},
     }

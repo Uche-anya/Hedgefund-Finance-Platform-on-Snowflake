@@ -358,6 +358,12 @@ to review the calendar or recover that day. The four trades are a simple
 deterministic example, not a real trading strategy. Settlement confirmations
 come from those fictional trades, so they are not independent custodian proof.
 
+Prepared price deliveries now use the date, ticker and normalized price values
+for their content hash. Massive's request ID stays in the saved provider
+response, because a retry gets a new request ID even when the prices are the
+same. A retry with unchanged prices therefore has the same delivery ID; a
+changed close is stopped for review rather than silently replacing a RAW day.
+
 `NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY` is the deployed dbt project object.
 The Snowflake task graph has three steps:
 
