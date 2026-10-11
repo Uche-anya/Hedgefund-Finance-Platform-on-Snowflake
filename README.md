@@ -386,7 +386,7 @@ suspended. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
 the warehouse stopped until the quota was reviewed and raised.
 
 The manual GitHub producer run for October 9 passed with `submit=false` on
-11 October 2026 ([run 38141401562](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/38141401562)).
+11 October 2026 ([run 38141708382](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/38141708382)).
 The hosted runner fetched 12,598 Massive bars, read Snowflake's previous close
 and prepared four fictional trades and four settlements. It did not submit new
 RAW data or run the dbt task graph. The first full hosted submission must use
