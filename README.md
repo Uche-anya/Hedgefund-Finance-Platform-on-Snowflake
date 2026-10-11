@@ -368,6 +368,8 @@ for their content hash. Massive's request ID stays in the saved provider
 response, because a retry gets a new request ID even when the prices are the
 same. A retry with unchanged prices therefore has the same delivery ID; a
 changed close is stopped for review rather than silently replacing a RAW day.
+This applies to new deliveries. The October 9 pilot was loaded with the older
+price-file format and should not be submitted again using the new format.
 
 `NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY` is the deployed dbt project object.
 The Snowflake task graph has three steps:
@@ -382,6 +384,13 @@ history showed `READY:2026-10-09` followed by successful dbt and record tasks.
 This is a checked calculation, not NAV publication. The root schedule remains
 suspended. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
 the warehouse stopped until the quota was reviewed and raised.
+
+The manual GitHub producer run for October 9 passed with `submit=false` on
+11 October 2026 ([run 38141401562](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/38141401562)).
+The hosted runner fetched 12,598 Massive bars, read Snowflake's previous close
+and prepared four fictional trades and four settlements. It did not submit new
+RAW data or run the dbt task graph. The first full hosted submission must use
+a new market day after its close is available.
 
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. It
 currently has only a manual trigger. Run it for a saved market date with
