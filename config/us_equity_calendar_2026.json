@@ -1,0 +1,11 @@
+{
+  "year": 2026,
+  "market_closed": [
+    "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03",
+    "2026-05-25", "2026-06-19", "2026-07-03", "2026-09-07",
+    "2026-11-26", "2026-12-25"
+  ],
+  "settlement_closed_extra": ["2026-10-12", "2026-11-11"],
+  "market_source": "https://www.nyse.com/trade/hours-calendars",
+  "settlement_source": "https://www.dtcc.com/-/media/Files/pdf/2025/10/15/23034-25.pdf"
+}

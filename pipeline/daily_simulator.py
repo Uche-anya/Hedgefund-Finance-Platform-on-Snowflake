@@ -4,26 +4,15 @@ from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
 from pipeline.sample_close import TRADES, save
+from pipeline.us_equity_calendar import (
+    is_market_day, is_settlement_day, next_settlement_day, previous_market_day
+)
 
 
 NAV = "NORTHBRIDGE_DEV.DBT_DEV.FCT_NAV_DAILY"
 RUNS = "NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS"
 PRICES = "NORTHBRIDGE_DEV.RAW.DAILY_PRICE_EVENTS"
 OMS = "NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS"
-
-
-def next_weekday(day):
-    result = day + timedelta(days=1)
-    while result.weekday() > 4:
-        result += timedelta(days=1)
-    return result
-
-
-def previous_weekday(day):
-    result = day - timedelta(days=1)
-    while result.weekday() > 4:
-        result -= timedelta(days=1)
-    return result
 
 
 def prior_close(cursor, business_date, scenario):
@@ -37,8 +26,8 @@ def prior_close(cursor, business_date, scenario):
     if not row or row[0] is None:
         raise ValueError("No earlier validated NAV for this scenario")
     previous = row[0]
-    if previous != previous_weekday(date.fromisoformat(business_date)):
-        raise ValueError("Previous weekday has no validated close; recover that date first")
+    if previous != previous_market_day(date.fromisoformat(business_date)):
+        raise ValueError("Previous market day has no validated close; recover that date first")
     cursor.execute(
         "SELECT COUNT(*) FROM " + NAV +
         " WHERE scenario_id = %s AND valuation_date = %s AND nav_usd IS NOT NULL",
@@ -73,6 +62,8 @@ def prior_prices(cursor, previous):
 
 
 def unsettled_trades(cursor, business_date, scenario):
+    if not is_settlement_day(date.fromisoformat(business_date)):
+        return []
     cursor.execute(
         "SELECT payload:execution_id::varchar, payload:account_id::varchar, "
         "payload:instrument_id::varchar, payload:side::varchar, "
@@ -103,9 +94,11 @@ def unsettled_trades(cursor, business_date, scenario):
 
 def write_day(business_date, scenario, data_dir, previous, closes, due_trades):
     day = date.fromisoformat(business_date)
-    if previous >= business_date or day.weekday() > 4:
-        raise ValueError("Expected a weekday after the previous close")
-    due = next_weekday(day).isoformat()
+    if previous >= business_date or not is_market_day(day):
+        raise ValueError("Expected a market day after the previous close")
+    if due_trades and not is_settlement_day(day):
+        raise ValueError("Cannot confirm settlements on a settlement holiday")
+    due = next_settlement_day(day).isoformat()
     trades = []
     for number, (account, ticker, side, quantity, offset) in enumerate(TRADES, 1):
         price = (closes[ticker] * (Decimal(1) + Decimal(offset) / 10000)).quantize(

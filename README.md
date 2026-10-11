@@ -352,9 +352,14 @@ files to Snowpipe. The price file went through the existing checked `COPY` path.
 The original Massive response, CSV and manifest were also saved in the internal
 stage under `provider_evidence/`.
 
-The producer is deliberately strict: a new day needs the previous weekday's
-validated NAV. A missed weekday, including a market holiday, needs an operator
-to review the calendar or recover that day. The four trades are a simple
+The producer is deliberately strict: a new day needs the previous market day's
+validated NAV. The reviewed 2026 calendar in `config/us_equity_calendar_2026.json`
+separates NYSE trading days from settlement days; a date outside that year stops
+until another calendar is reviewed. October 12 is a trading day but not a
+settlement day, so Friday's confirmations wait until October 13. The October 9
+pilot trades were generated before this correction and still say October 12 in
+their `settlement_due` field; they are held rather than falsely confirmed on
+that date. The four trades are a simple
 deterministic example, not a real trading strategy. Settlement confirmations
 come from those fictional trades, so they are not independent custodian proof.
 

@@ -6,7 +6,10 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import Mock
 
-from pipeline.daily_simulator import next_weekday, previous_weekday, prior_close, write_day
+from pipeline.daily_simulator import prior_close, unsettled_trades, write_day
+from pipeline.us_equity_calendar import (
+    is_market_day, is_settlement_day, next_settlement_day, previous_market_day
+)
 
 
 class DailySimulatorTest(unittest.TestCase):
@@ -26,14 +29,36 @@ class DailySimulatorTest(unittest.TestCase):
             settlement_file = folder / "daily_settlements/demo/2026-10-09/settlements.jsonl"
             trades = [json.loads(line) for line in oms_file.read_text().splitlines()]
             settled = [json.loads(line) for line in settlement_file.read_text().splitlines()]
-            self.assertEqual({row["settlement_due"] for row in trades}, {"2026-10-12"})
+            self.assertEqual({row["settlement_due"] for row in trades}, {"2026-10-13"})
             self.assertEqual([row["cash_amount"] for row in settled],
                              ["-2440.00", "1135.00"])
             self.assertTrue(all(row["is_simulated"] for row in trades + settled))
 
-    def test_next_weekday(self):
-        self.assertEqual(next_weekday(date(2026, 10, 9)), date(2026, 10, 12))
-        self.assertEqual(previous_weekday(date(2026, 10, 12)), date(2026, 10, 9))
+    def test_trading_day_can_be_a_settlement_holiday(self):
+        self.assertTrue(is_market_day(date(2026, 10, 12)))
+        self.assertFalse(is_settlement_day(date(2026, 10, 12)))
+        self.assertEqual(next_settlement_day(date(2026, 10, 9)), date(2026, 10, 13))
+        self.assertEqual(previous_market_day(date(2026, 10, 12)), date(2026, 10, 9))
+        cursor = Mock()
+        self.assertEqual(unsettled_trades(cursor, "2026-10-12", "demo"), [])
+        cursor.execute.assert_not_called()
+
+    def test_unreviewed_calendar_year_stops(self):
+        with self.assertRaisesRegex(ValueError, "No reviewed US equity calendar"):
+            is_market_day(date(2027, 1, 4))
+
+    def test_bank_holiday_has_trades_but_no_settlements(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            closes = {"AAPL": Decimal("245"), "AMZN": Decimal("227"),
+                      "MSFT": Decimal("420"), "KO": Decimal("65")}
+            self.assertEqual(write_day("2026-10-12", "demo", folder,
+                                       "2026-10-09", closes, []), (4, 0))
+            events = folder / "daily_settlements/demo/2026-10-12/settlements.jsonl"
+            self.assertEqual(events.read_text(), "")
+            with self.assertRaisesRegex(ValueError, "settlement holiday"):
+                write_day("2026-10-12", "demo", folder,
+                          "2026-10-09", closes, [("x", "a", "AAPL.US", "BUY", "1", "1", "2026-10-12")])
 
     def test_missing_prior_weekday_stops_new_close(self):
         cursor = Mock()

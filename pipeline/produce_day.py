@@ -6,6 +6,7 @@ from pathlib import Path
 
 from pipeline import daily_simulator, load_day, massive_prices, prices
 from pipeline.check_day import closing_prices
+from pipeline.us_equity_calendar import is_market_day
 
 
 def save_market_evidence(cursor, price_file, delivery_id):
@@ -26,8 +27,8 @@ def save_market_evidence(cursor, price_file, delivery_id):
 
 def run(business_date, scenario, data_dir, submit):
     day = date.fromisoformat(business_date)
-    if day.weekday() > 4:
-        raise ValueError("No scheduled US equity close on a weekend")
+    if not is_market_day(day):
+        raise ValueError("No scheduled US equity close on this date")
 
     price_file = massive_prices.fetch(business_date, data_dir)
     with load_day.snowflake_connection() as connection:
