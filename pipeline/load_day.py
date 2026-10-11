@@ -7,7 +7,7 @@ import re
 from datetime import date
 from pathlib import Path
 
-from pipeline.check_day import closing_prices, read_delivery
+from pipeline.check_day import check_oms_reports, closing_prices, read_delivery
 
 
 STAGE = "NORTHBRIDGE_DEV.RAW.DAILY_LANDING"
@@ -28,6 +28,8 @@ def delivery(data_dir, scenario, business_date, source):
 
     manifest, records = read_delivery(folder, file_name, date_field,
                                       business_date, scenario)
+    if source == "oms":
+        check_oms_reports(records)
     delivery_id = manifest["delivery_id"]
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", delivery_id):
         raise ValueError("Unsafe delivery ID: {}".format(delivery_id))

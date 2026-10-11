@@ -1,4 +1,5 @@
--- Use only files registered for this scenario. Keep the latest report for each execution.
+-- Use registered files and keep the latest version of each execution.
+-- conflicting_oms_reports checks that one version does not tell two stories.
 with received as (
     select
         r.payload,

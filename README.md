@@ -433,6 +433,24 @@ wait and retry while inputs are late. The task currently makes one scheduled
 readiness decision; it does not retry later that night. The existing trial
 resource monitor is a hard cost stop, not a pipeline error to bypass.
 
+## An OMS conflict drill
+
+`python -m pipeline.incident_drill` saves a separate fictional OMS delivery in
+`data/drills/`. One report says the fund bought 10 AAPL shares; a later report
+for the same execution ID and version says 12. A real resend can repeat the
+same details, but changing the trade requires a new version and investigation.
+The drill never submits to Snowflake. Its local delivery check rejects the
+conflict before Snowpipe. The dbt `conflicting_oms_reports` test checks the same
+rule in RAW in case another ingestion route bypasses that local check.
+
+The daily close already has other realistic boundaries: it waits for a missing
+held-stock price, carries Friday settlements across the weekend, and records an
+empty settlement delivery on the October 12 settlement holiday. These are
+fictional fund events alongside real market prices, not claims about an actual
+broker or custodian. A properly versioned trade correction still needs a
+separate end-to-end settlement and cash replay; this drill only proves the
+conflicting same-version case is stopped.
+
 On 11 October 2026, `SHOW RESOURCE MONITORS` showed the dev monitor at
 5.05/5.00 monthly credits. `SHOW WAREHOUSES` confirmed that `COMPUTE_WH` is
 attached to that monitor and is suspended. The separate CI and prod monitors

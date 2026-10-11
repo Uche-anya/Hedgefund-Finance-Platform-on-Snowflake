@@ -7,6 +7,30 @@ import json
 from pathlib import Path
 
 
+OMS_FIELDS = (
+    "business_date", "executed_at", "order_id", "fund_id", "account_id",
+    "broker_id", "instrument_id",
+    "market_ticker", "side", "quantity", "execution_price", "currency",
+    "execution_status", "settlement_due",
+)
+
+
+def check_oms_reports(records):
+    versions = {}
+    for record in records:
+        if record.get("event_type") != "EXECUTION_REPORTED":
+            raise ValueError("Unexpected OMS event type")
+        execution_id = record.get("execution_id")
+        version = record.get("execution_version")
+        if (not execution_id or type(version) is not int or version < 1):
+            raise ValueError("Missing or invalid OMS execution ID/version")
+        key = execution_id, version
+        details = tuple(record.get(field) for field in OMS_FIELDS)
+        if key in versions and versions[key] != details:
+            raise ValueError("Conflicting OMS report for {} version {}".format(*key))
+        versions[key] = details
+
+
 def read_delivery(folder, file_name, date_field, business_date, scenario,
                   record_date_field=None):
     manifest_path = folder / "manifest.json"
@@ -66,6 +90,7 @@ def main():
             args.data_dir / "daily_oms" / args.scenario / args.business_date,
             "oms.jsonl", "business_date", args.business_date, args.scenario
         )
+        check_oms_reports(trades)
         settlement, settled = read_delivery(
             args.data_dir / "daily_settlements" / args.scenario / args.business_date,
             "settlements.jsonl", "settlement_date", args.business_date, args.scenario
