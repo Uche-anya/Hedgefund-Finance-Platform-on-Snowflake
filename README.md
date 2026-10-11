@@ -392,6 +392,16 @@ and prepared four fictional trades and four settlements. It did not submit new
 RAW data or run the dbt task graph. The first full hosted submission must use
 a new market day after its close is available.
 
+For the October 12 check, wait until Massive has published the completed US
+close. Dispatch `daily-producer.yml` with `business_date=2026-10-12` and
+`submit=true`. Then run `snowflake/11_verify_october_close.sql`; its readiness
+call should return `READY:2026-10-12`. If it says `WAITING_INPUTS`, give
+Snowpipe time to load and check again. Only when it is ready, run
+`snowflake/10_test_october_close.sql` to execute the task graph once. Run the
+verification file again: it should show two NAV rows and a `VALIDATED` close
+run. Leave the scheduled root task suspended until this hosted submission and
+task run both pass.
+
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. It
 currently has only a manual trigger. Run it for a saved market date with
 `submit=false` to check the hosted runner, Massive login, Snowflake login and
