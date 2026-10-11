@@ -7,8 +7,11 @@ on:
         description: US market date (YYYY-MM-DD)
         required: true
         type: string
-  schedule:
-    - cron: '0 1 * * 2-6'
+      submit:
+        description: Send the prepared files to Snowflake
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,13 +62,13 @@ jobs:
           path.write_bytes(base64.b64decode(value, validate=True))
           path.chmod(0o600)
           PY
-      - name: Deliver the market day
+      - name: Prepare or deliver the market day
         env:
-          REQUESTED_DATE: ${{ github.event.inputs.business_date }}
+          REQUESTED_DATE: ${{ inputs.business_date }}
+          SUBMIT: ${{ inputs.submit }}
         run: |
-          if [ -n "$REQUESTED_DATE" ]; then
-            day="$REQUESTED_DATE"
+          if [ "$SUBMIT" = true ]; then
+            python -m pipeline.produce_day "$REQUESTED_DATE" --submit
           else
-            day="$(date -u -d yesterday +%F)"
+            python -m pipeline.produce_day "$REQUESTED_DATE"
           fi
-          python -m pipeline.produce_day "$day" --submit

@@ -370,15 +370,17 @@ were $4,999,900.55 and $5,000,086.40 for accounts 01 and 02. Snowflake's task
 history showed `READY:2026-10-09` followed by successful dbt and record tasks.
 This is a checked calculation, not NAV publication. The root schedule remains
 suspended. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
-further warehouse queries and scheduled runs require a cost review before
-activation.
+the warehouse stopped until the quota was reviewed and raised.
 
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. It
-runs at 01:00 UTC Tuesday through Saturday for the preceding US market date;
-the Snowflake root task is set for 03:00 New York time on the same days. The
-workflow is not active until it is committed to the default branch and the
-following GitHub settings are supplied: repository variable `SNOWFLAKE_ACCOUNT`,
-secrets `MASSIVE_API_KEY` and `NORTHBRIDGE_LOADER_KEY_B64`. The latter is the
+currently has only a manual trigger. Run it for a saved market date with
+`submit=false` to check the hosted runner, Massive login, Snowflake login and
+file preparation without loading new records. Set `submit=true` only for a
+reviewed new market day. The Snowflake root task is defined for 03:00 New York
+time Tuesday through Saturday but remains suspended. We will add the producer's
+daily schedule after a submitted day passes end to end. The GitHub
+secrets `MASSIVE_API_KEY` and `NORTHBRIDGE_LOADER_KEY_B64` and repository variable
+`SNOWFLAKE_ACCOUNT` were configured on 11 October 2026. The latter key is the
 base64 form of the loader service user's private key. Do not put that key in
 the repository. A separate workflow service key is preferable when this is
 operated beyond the portfolio pilot.
@@ -393,13 +395,15 @@ On 11 October 2026, `SHOW RESOURCE MONITORS` showed the dev monitor at
 5.05/5.00 monthly credits. `SHOW WAREHOUSES` confirmed that `COMPUTE_WH` is
 attached to that monitor and is suspended. The separate CI and prod monitors
 still had credits, but this dev pipeline does not silently move to either
-warehouse. Review the trial budget before changing the dev limit or assigning
-a different warehouse.
+warehouse. The limit was reviewed before changing it; no other warehouse was
+assigned.
 
-To activate the hosted producer later, authenticate GitHub CLI with
-`gh auth login -h github.com` and set the repository variable and two secrets
-named above. The local `gh auth status` check on 11 October reported an expired
-login. Save the Massive key privately with
+After approval, the dev monitor quota was raised to 10 credits. Snowflake
+reported 5.05 used and 4.95 remaining in the current interval. This makes
+another warehouse run possible; it does not activate the scheduled tasks.
+
+To configure the hosted producer on another account, authenticate GitHub CLI
+with `gh auth login -h github.com`. Save the Massive key privately with
 `python -m scripts.save_massive_key`, then run
 `python -m scripts.configure_daily_github` to send the saved key and loader
 private key to GitHub Actions as repository secrets. That script sends secrets
