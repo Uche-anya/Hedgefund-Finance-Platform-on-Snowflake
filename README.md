@@ -313,10 +313,105 @@ account 02 ended at $4,999,901.12. The first run ID was
 A second run reused all five deliveries and returned the same NAVs. Snowflake
 recorded two `VALIDATED` attempts. The dbt price model now starts at the
 scenario's opening date, so this October close does not create NAV rows for
-the older market dates already present in RAW. The dbt marts are rebuilt for
-one scenario per run; they are not a persistent history of every scenario.
+the older market dates already present in RAW.
 
 This proves a live price fetch through a validated dev close. The trades,
 opening records and empty settlement delivery are fictional. There is no
 independent broker or bank reconciliation, NAV publication, or unattended
 schedule yet.
+
+## Keep each daily result
+
+The three dbt marts now merge one requested date into the existing tables.
+Position rows use date, scenario, account and instrument as their key. Cash and
+NAV rows use date, scenario and account. A rerun updates the same keys rather
+than adding another copy. The raw deliveries remain separate and unchanged.
+
+After converting the marts, we rebuilt the 8 October 2026 close and then ran
+the saved 24 and 25 September 2024 closes in order. All three dates remained
+in the marts: 16 position rows, 6 cash rows and 6 NAV rows. Retrying
+25 September left those counts unchanged and the NAV key test found no
+duplicates. Each build passed 31 dbt results. For example, the two account
+NAVs on 24 September were $4,999,618.60 and $4,999,680.20; on 25 September
+they were $4,999,650.52 and $4,999,008.00. The October NAVs remained
+$5,000,063.30 and $4,999,901.12.
+
+These tables hold the latest calculated value for each key. They do not keep
+the earlier calculated value if a correction changes that key. The run log
+records attempts, but an audit trail of NAV revisions and a publication
+decision are still separate work. A dbt full refresh would also rebuild from
+only the selected run's inputs, so it is not the normal daily command.
+
+## Daily runner and Snowflake task
+
+The October 9 close is the first run of the next-day path. `pipeline.produce_day`
+fetched 12,598 real, unadjusted Massive closes. It read the previous validated
+close and prices from Snowflake, saved four new fictional trades and four
+fictional confirmations for the October 8 trades, then submitted the two event
+files to Snowpipe. The price file went through the existing checked `COPY` path.
+The original Massive response, CSV and manifest were also saved in the internal
+stage under `provider_evidence/`.
+
+The producer is deliberately strict: a new day needs the previous weekday's
+validated NAV. A missed weekday, including a market holiday, needs an operator
+to review the calendar or recover that day. The four trades are a simple
+deterministic example, not a real trading strategy. Settlement confirmations
+come from those fictional trades, so they are not independent custodian proof.
+
+`NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY` is the deployed dbt project object.
+The Snowflake task graph has three steps:
+
+1. `DAILY_CLOSE_READY` checks the five registered sources and held-stock prices.
+2. `DAILY_CLOSE_BUILD` runs `dbt build` only when the first step says ready.
+3. `DAILY_CLOSE_RECORD` checks for two NAV rows and records a validated run.
+
+The manual October 9 graph run succeeded through all three tasks. Its NAV rows
+were $4,999,900.55 and $5,000,086.40 for accounts 01 and 02. Snowflake's task
+history showed `READY:2026-10-09` followed by successful dbt and record tasks.
+This is a checked calculation, not NAV publication. The root schedule remains
+suspended. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
+further warehouse queries and scheduled runs require a cost review before
+activation.
+
+The hosted producer is defined in `.github/workflows/daily-producer.yml`. It
+runs at 01:00 UTC Tuesday through Saturday for the preceding US market date;
+the Snowflake root task is set for 03:00 New York time on the same days. The
+workflow is not active until it is committed to the default branch and the
+following GitHub settings are supplied: repository variable `SNOWFLAKE_ACCOUNT`,
+secrets `MASSIVE_API_KEY` and `NORTHBRIDGE_LOADER_KEY_B64`. The latter is the
+base64 form of the loader service user's private key. Do not put that key in
+the repository. A separate workflow service key is preferable when this is
+operated beyond the portfolio pilot.
+
+GitHub's scheduled workflows can start late. For a service with a firm close
+deadline, use a runner with a reliable scheduler and alerts, or make the task
+wait and retry while inputs are late. The task currently makes one scheduled
+readiness decision; it does not retry later that night. The existing trial
+resource monitor is a hard cost stop, not a pipeline error to bypass.
+
+On 11 October 2026, `SHOW RESOURCE MONITORS` showed the dev monitor at
+5.05/5.00 monthly credits. `SHOW WAREHOUSES` confirmed that `COMPUTE_WH` is
+attached to that monitor and is suspended. The separate CI and prod monitors
+still had credits, but this dev pipeline does not silently move to either
+warehouse. Review the trial budget before changing the dev limit or assigning
+a different warehouse.
+
+To activate the hosted producer later, authenticate GitHub CLI with
+`gh auth login -h github.com` and set the repository variable and two secrets
+named above. The local `gh auth status` check on 11 October reported an expired
+login. Save the Massive key privately with
+`python -m scripts.save_massive_key`, then run
+`python -m scripts.configure_daily_github` to send the saved key and loader
+private key to GitHub Actions as repository secrets. That script sends secrets
+through standard input so they do not appear as command arguments. Do not put
+either key in a committed file. Test `workflow_dispatch` for a single date
+before enabling the Snowflake root task.
+
+To redeploy dbt source after a reviewed change, run
+`python -m scripts.deploy_dbt_project` with the dbt service key environment
+settings. It updates the project object without replacing its run history.
+`snowflake/09_task_access.sql` holds the role grants and
+`snowflake/09_daily_task.sql` holds the suspended task graph. The Snowflake CLI
+3.27 uploader failed with `Cannot join path to a file` on Windows, so the
+deployment script uploads just the project source files to an internal stage
+and uses `CREATE DBT PROJECT` or `ALTER DBT PROJECT ... DEPLOY`.

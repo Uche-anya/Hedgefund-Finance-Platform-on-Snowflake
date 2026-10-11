@@ -9,6 +9,11 @@ test-paths: ['tests']
 on-run-start:
   - 'use secondary roles none'
 
+vars:
+  business_date: "{{ env_var('DBT_BUSINESS_DATE', 'DATE_REQUIRED') }}"
+  opening_date: "{{ env_var('DBT_OPENING_DATE', 'DATE_REQUIRED') }}"
+  scenario_id: "{{ env_var('DBT_SCENARIO_ID', 'SCENARIO_REQUIRED') }}"
+
 models:
   northbridge:
     staging:

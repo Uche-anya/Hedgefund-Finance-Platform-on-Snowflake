@@ -1,8 +1,13 @@
 -- First NAV: USD equity positions plus modeled cash and unsettled trade cash.
+{{ config(materialized='incremental', incremental_strategy='merge',
+          unique_key=['valuation_date', 'scenario_id', 'account_id']) }}
+
 with positions as (
     select valuation_date, scenario_id, account_id,
         sum(market_value) as position_value
     from {{ ref('fct_position_daily') }}
+    where valuation_date = to_date('{{ var("business_date") }}')
+      and scenario_id = '{{ var("scenario_id") }}'
     group by 1, 2, 3
 )
 select
@@ -19,3 +24,5 @@ left join positions p
     on p.valuation_date = c.valuation_date
     and p.scenario_id = c.scenario_id
     and p.account_id = c.account_id
+where c.valuation_date = to_date('{{ var("business_date") }}')
+  and c.scenario_id = '{{ var("scenario_id") }}'

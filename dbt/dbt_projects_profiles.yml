@@ -1,0 +1,10 @@
+northbridge:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      database: NORTHBRIDGE_DEV
+      schema: DBT_DEV
+      warehouse: COMPUTE_WH
+      role: NORTHBRIDGE_DBT_DEV
+      threads: 1

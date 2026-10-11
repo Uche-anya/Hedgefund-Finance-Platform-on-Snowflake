@@ -1,0 +1,178 @@
+-- Deploy the dbt project into NORTHBRIDGE_DEV.DBT_DEV before running this file.
+-- The task owner needs CREATE TASK/PROCEDURE on DBT_DEV and EXECUTE TASK on account.
+-- Keep the root suspended until the hosted producer and task have been tested.
+USE ROLE NORTHBRIDGE_DBT_DEV;
+
+CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DAILY_INPUTS(
+    CLOSE_DATE DATE, SCENARIO VARCHAR, OPENING_DATE DATE)
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+    source_count NUMBER;
+    ready_count NUMBER;
+    missing_prices NUMBER;
+    state VARCHAR;
+BEGIN
+    SELECT COUNT(*), COUNT_IF(
+        (expected_rows = 0 AND status = 'EMPTY' AND loaded_rows = 0)
+        OR (expected_rows > 0 AND status IN ('SUBMITTED', 'LOADED')
+            AND expected_rows = loaded_rows))
+      INTO :source_count, :ready_count
+    FROM (
+        SELECT d.source_name, d.expected_rows, d.status,
+            COALESCE(SUM(l.row_count), 0) AS loaded_rows
+        FROM NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES d
+        LEFT JOIN (
+            SELECT 'oms' AS source_name, source_file, COUNT(*) AS row_count
+            FROM NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS GROUP BY 2
+            UNION ALL
+            SELECT 'settlements', source_file, COUNT(*)
+            FROM NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_EVENTS GROUP BY 2
+            UNION ALL
+            SELECT 'prices', source_file, COUNT(*)
+            FROM NORTHBRIDGE_DEV.RAW.DAILY_PRICE_EVENTS GROUP BY 2
+            UNION ALL
+            SELECT 'opening_bank', source_file, COUNT(*)
+            FROM NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS GROUP BY 2
+            UNION ALL
+            SELECT 'opening_admin', source_file, COUNT(*)
+            FROM NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS GROUP BY 2
+        ) l ON l.source_name = d.source_name
+            AND ENDSWITH(l.source_file, d.stage_path)
+        WHERE (d.business_date = :CLOSE_DATE AND d.scenario_id = :SCENARIO
+               AND d.source_name IN ('oms', 'settlements'))
+           OR (d.business_date = :CLOSE_DATE AND d.scenario_id = 'massive'
+               AND d.source_name = 'prices')
+           OR (d.business_date = :OPENING_DATE AND d.scenario_id = :SCENARIO
+               AND d.source_name IN ('opening_bank', 'opening_admin'))
+        GROUP BY d.source_name, d.expected_rows, d.status, d.delivery_id
+    );
+
+    IF (source_count != 5 OR ready_count != 5) THEN
+        state := 'WAITING_INPUTS';
+        RETURN state;
+    END IF;
+
+    SELECT COUNT(*) INTO :missing_prices
+    FROM (
+        SELECT r.payload:market_ticker::varchar AS ticker,
+            SUM(CASE r.payload:side::varchar
+                WHEN 'BUY' THEN TRY_TO_DECIMAL(r.payload:quantity::varchar, 38, 9)
+                WHEN 'SELL' THEN -TRY_TO_DECIMAL(r.payload:quantity::varchar, 38, 9)
+            END) AS shares
+        FROM NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS r
+        JOIN NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES d
+            ON d.source_name = 'oms' AND d.scenario_id = :SCENARIO
+            AND d.business_date <= :CLOSE_DATE AND d.status = 'SUBMITTED'
+            AND ENDSWITH(r.source_file, d.stage_path)
+        GROUP BY 1
+        HAVING shares <> 0
+    ) held
+    LEFT JOIN (
+        SELECT r.payload:universe_ticker::varchar AS ticker,
+            COUNT(*) AS price_rows
+        FROM NORTHBRIDGE_DEV.RAW.DAILY_PRICE_EVENTS r
+        JOIN NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES d
+            ON d.source_name = 'prices' AND d.scenario_id = 'massive'
+            AND d.business_date = :CLOSE_DATE AND d.status = 'LOADED'
+            AND ENDSWITH(r.source_file, d.stage_path)
+        WHERE TRY_TO_DECIMAL(r.payload:close_price::varchar, 38, 9) > 0
+          AND r.payload:currency::varchar = 'USD'
+          AND r.payload:price_basis::varchar = 'unadjusted'
+        GROUP BY 1
+    ) priced ON priced.ticker = held.ticker
+    WHERE priced.price_rows IS NULL OR priced.price_rows != 1;
+
+    IF (missing_prices > 0) THEN
+        state := 'WAITING_PRICES';
+    ELSE
+        state := 'READY:' || TO_VARCHAR(CLOSE_DATE, 'YYYY-MM-DD');
+    END IF;
+    RETURN state;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.SET_DAILY_TASK_STATE(
+    CLOSE_DATE DATE, SCENARIO VARCHAR, OPENING_DATE DATE)
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+$$
+DECLARE state VARCHAR;
+BEGIN
+    CALL NORTHBRIDGE_DEV.DBT_DEV.CHECK_DAILY_INPUTS(
+        :CLOSE_DATE, :SCENARIO, :OPENING_DATE) INTO :state;
+    CALL SYSTEM$SET_RETURN_VALUE(:state);
+    RETURN state;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.RECORD_DAILY_CLOSE(
+    CLOSE_DATE DATE, SCENARIO VARCHAR, OPENING_DATE DATE)
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+    nav_count NUMBER;
+    bad_nav EXCEPTION(-20001, 'Expected one NAV per account');
+BEGIN
+    SELECT COUNT(*) INTO :nav_count
+    FROM NORTHBRIDGE_DEV.DBT_DEV.FCT_NAV_DAILY
+    WHERE valuation_date = :CLOSE_DATE AND scenario_id = :SCENARIO
+      AND nav_usd IS NOT NULL;
+    IF (nav_count != 2) THEN
+        RAISE bad_nav;
+    END IF;
+    INSERT INTO NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS
+        (run_id, business_date, scenario_id, opening_date, status, detail, finished_at)
+    VALUES (UUID_STRING(), :CLOSE_DATE, :SCENARIO, :OPENING_DATE,
+            'VALIDATED', 'Snowflake dbt project build passed', CURRENT_TIMESTAMP());
+    RETURN 'VALIDATED';
+END;
+$$;
+
+CREATE OR ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY
+    WAREHOUSE = COMPUTE_WH
+    SCHEDULE = 'USING CRON 0 3 * * TUE-SAT America/New_York'
+    CONFIG = $${"business_date": null}$$
+AS
+    CALL NORTHBRIDGE_DEV.DBT_DEV.SET_DAILY_TASK_STATE(
+        COALESCE(
+            TRY_TO_DATE(SYSTEM$GET_TASK_GRAPH_CONFIG('business_date')::varchar),
+            DATEADD(day, -1, CONVERT_TIMEZONE('America/New_York', CURRENT_TIMESTAMP())::date)
+        ),
+        'sim-close-20261008', '2026-10-07'::date);
+
+CREATE OR ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD
+    WAREHOUSE = COMPUTE_WH
+    AFTER NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY
+    WHEN SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_INPUTS'
+     AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_PRICES'
+AS
+    EXECUTE DBT PROJECT NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY
+        ARGS = 'build --target dev'
+        DBT_VERSION = '1.12.3'
+        ENV_VARS = (
+            'DBT_BUSINESS_DATE' = '{{ select substr(SYSTEM$GET_PREDECESSOR_RETURN_VALUE(\'DAILY_CLOSE_READY\'), 7) }}',
+            'DBT_OPENING_DATE' = '2026-10-07',
+            'DBT_SCENARIO_ID' = 'sim-close-20261008'
+        );
+
+CREATE OR ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_RECORD
+    WAREHOUSE = COMPUTE_WH
+    AFTER NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD
+AS
+    CALL NORTHBRIDGE_DEV.DBT_DEV.RECORD_DAILY_CLOSE(
+        TO_DATE(SUBSTR(SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY'), 7)),
+        'sim-close-20261008', '2026-10-07'::date);
+
+-- Activate only after a manual task run validates the producer and dbt project.
+-- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_RECORD RESUME;
+-- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD RESUME;
+-- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY RESUME;

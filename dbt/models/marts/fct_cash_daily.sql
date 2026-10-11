@@ -1,7 +1,11 @@
 -- Trade cash is owed from trade date; settlement moves it into modeled cash.
+{{ config(materialized='incremental', incremental_strategy='merge',
+          unique_key=['valuation_date', 'scenario_id', 'account_id']) }}
+
 with days as (
     select distinct valuation_date
     from {{ ref('stg_prices') }}
+    where valuation_date = to_date('{{ var("business_date") }}')
 ), trades as (
     select
         scenario_id, account_id, execution_id, business_date,

@@ -1,7 +1,11 @@
 -- Each price date closes the position built from all executions through that day.
+{{ config(materialized='incremental', incremental_strategy='merge',
+          unique_key=['valuation_date', 'scenario_id', 'account_id', 'instrument_id']) }}
+
 with days as (
     select distinct valuation_date
     from {{ ref('stg_prices') }}
+    where valuation_date = to_date('{{ var("business_date") }}')
 ), holdings as (
     select
         d.valuation_date,
