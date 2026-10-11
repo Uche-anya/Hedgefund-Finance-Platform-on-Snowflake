@@ -30,7 +30,6 @@ jobs:
       SNOWFLAKE_USER: NORTHBRIDGE_LOADER
       SNOWFLAKE_ROLE: NORTHBRIDGE_INGEST_DEV
       SNOWFLAKE_PRIVATE_KEY_B64: ${{ secrets.NORTHBRIDGE_LOADER_KEY_B64 }}
-      SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
     steps:
       - name: Check connection settings
         run: |
@@ -49,6 +48,8 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt
       - name: Write the loader key
+        env:
+          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
         run: |
           python - <<'PY'
           import base64
@@ -66,6 +67,7 @@ jobs:
         env:
           REQUESTED_DATE: ${{ inputs.business_date }}
           SUBMIT: ${{ inputs.submit }}
+          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
         run: |
           if [ "$SUBMIT" = true ]; then
             python -m pipeline.produce_day "$REQUESTED_DATE" --submit
