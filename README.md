@@ -402,18 +402,30 @@ verification file again: it should show two NAV rows and a `VALIDATED` close
 run. Leave the scheduled root task suspended until this hosted submission and
 task run both pass.
 
-The hosted producer is defined in `.github/workflows/daily-producer.yml`. It
-currently has only a manual trigger. Run it for a saved market date with
-`submit=false` to check the hosted runner, Massive login, Snowflake login and
-file preparation without loading new records. Set `submit=true` only for a
-reviewed new market day. The Snowflake root task is defined for 03:00 New York
-time Tuesday through Saturday but remains suspended. We will add the producer's
-daily schedule after a submitted day passes end to end. The GitHub
+The hosted producer is defined in `.github/workflows/daily-producer.yml`. A
+manual run with `submit=false` checks the runner, Massive login, Snowflake login
+and file preparation without loading records. Set `submit=true` only for a
+reviewed new market day. A scheduled run is defined for 00:17 New York time
+Tuesday through Saturday, but its job is gated by the repository variable
+`NORTHBRIDGE_DAILY_ENABLED=true`. Do not set that variable until the hosted
+submission and dbt task pass together. The scheduled runner chooses yesterday
+in New York and skips it if the reviewed NYSE calendar says the market was
+closed. A manual request for a closed date still fails, so a mistyped date is
+visible. The GitHub
 secrets `MASSIVE_API_KEY` and `NORTHBRIDGE_LOADER_KEY_B64` and repository variable
 `SNOWFLAKE_ACCOUNT` were configured on 11 October 2026. The latter key is the
 base64 form of the loader service user's private key. Do not put that key in
 the repository. A separate workflow service key is preferable when this is
 operated beyond the portfolio pilot.
+
+The Snowflake root task is set for 03:00 New York time Tuesday through
+Saturday but remains suspended. Its schedule does not select Saturday or Sunday
+as a business date. On a market holiday, missing inputs leave the dbt child
+task idle. When inputs are ready, the task passes that date to dbt. The staging
+views read the relevant raw deliveries, and the incremental cash, position and
+NAV tables merge rows for that date. They do not create weekend NAV rows. The
+readiness procedure also returns `ALREADY_VALIDATED` for a date with a checked
+close, so a retry does not rebuild dbt or record another validated attempt.
 
 GitHub's scheduled workflows can start late. For a service with a firm close
 deadline, use a runner with a reliable scheduler and alerts, or make the task
