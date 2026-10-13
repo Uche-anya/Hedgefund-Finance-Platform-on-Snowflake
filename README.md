@@ -402,6 +402,17 @@ verification file again: it should show two NAV rows and a `VALIDATED` close
 run. Leave the scheduled root task suspended until this hosted submission and
 task run both pass.
 
+On 13 October 2026, the hosted October 12 delivery completed with 4 fictional
+trades, 0 settlements and 12,602 Massive closing prices. RAW readiness returned
+`READY:2026-10-12`. The dbt build task succeeded and produced NAV of
+$5,000,070.45 and $5,000,124.96 for accounts 01 and 02. The record task failed:
+Snowflake rejected `UUID_STRING()` inside its `INSERT ... VALUES` statement.
+`snowflake/12_repair_close_record.sql` replaced only that procedure, using
+`INSERT ... SELECT`. After checking both NAV rows and the successful dbt task,
+we called the repaired procedure to record `VALIDATED`. A repeat call returned
+`ALREADY_VALIDATED` without adding another run. This was a manual recovery, not
+an unattended end-to-end success; both automatic schedules remain disabled.
+
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. A
 manual run with `submit=false` checks the runner, Massive login, Snowflake login
 and file preparation without loading records. Set `submit=true` only for a
