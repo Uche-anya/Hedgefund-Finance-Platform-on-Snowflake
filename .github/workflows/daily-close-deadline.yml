@@ -24,7 +24,6 @@ jobs:
       SNOWFLAKE_USER: NORTHBRIDGE_LOADER
       SNOWFLAKE_ROLE: NORTHBRIDGE_INGEST_DEV
       SNOWFLAKE_PRIVATE_KEY_B64: ${{ secrets.NORTHBRIDGE_LOADER_KEY_B64 }}
-      SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
       REQUESTED_DATE: ${{ inputs.business_date }}
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +35,8 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt
       - name: Write the loader key
+        env:
+          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
         run: |
           python - <<'PY'
           import base64
@@ -50,6 +51,8 @@ jobs:
           path.chmod(0o600)
           PY
       - name: Check the close
+        env:
+          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
         run: |
           if [ -n "$REQUESTED_DATE" ]; then
             python -m pipeline.check_close_deadline --business-date "$REQUESTED_DATE"
