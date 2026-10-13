@@ -429,20 +429,26 @@ base64 form of the loader service user's private key. Do not put that key in
 the repository. A separate workflow service key is preferable when this is
 operated beyond the portfolio pilot.
 
-The Snowflake root task is set for 03:00 New York time Tuesday through
-Saturday but remains suspended. Its schedule does not select Saturday or Sunday
-as a business date. On a market holiday, missing inputs leave the dbt child
-task idle. When inputs are ready, the task passes that date to dbt. The staging
+The Snowflake root task now checks at 02:00, 03:00, 04:00 and 05:00 New York
+time Tuesday through Saturday, but remains suspended. If Snowpipe is still
+loading at the first check, a later check can start the close. Its schedule
+does not select Saturday or Sunday as a business date. On a market holiday,
+missing inputs leave the dbt child task idle. When inputs are ready, the task
+passes that date to dbt. The staging
 views read the relevant raw deliveries, and the incremental cash, position and
 NAV tables merge rows for that date. They do not create weekend NAV rows. The
 readiness procedure also returns `ALREADY_VALIDATED` for a date with a checked
 close, so a retry does not rebuild dbt or record another validated attempt.
 
-GitHub's scheduled workflows can start late. For a service with a firm close
-deadline, use a runner with a reliable scheduler and alerts, or make the task
-wait and retry while inputs are late. The task currently makes one scheduled
-readiness decision; it does not retry later that night. The existing trial
-resource monitor is a hard cost stop, not a pipeline error to bypass.
+The `daily-close-deadline.yml` workflow checks for exactly one validated close
+at 05:30 New York time. It skips weekends and reviewed market holidays. A
+missing close makes that GitHub run fail; delivery to a person's email or web
+notifications depends on their GitHub notification settings. The workflow and
+the producer schedule both remain gated by `NORTHBRIDGE_DAILY_ENABLED`.
+GitHub's scheduled workflows can start late, and the producer still makes only
+one scheduled attempt to fetch and submit a market day. A failed producer
+therefore needs an operator to retry it. The trial resource monitor remains a
+hard cost stop, not a pipeline error to bypass.
 
 ## An OMS conflict drill
 
