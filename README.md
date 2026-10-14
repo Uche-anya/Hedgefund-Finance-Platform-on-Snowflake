@@ -571,3 +571,13 @@ matching and any NAV accrual need their own reviewed accounting rules.
 On 14 October 2026 the first snapshot produced 7,520 current events, all
 `PENDING`, and zero account exposures. That is the safe starting state: the
 provider feed has arrived, but no security identity has been approved.
+
+The dividend feed now has its own GitHub schedule at 00:25 and 01:25 New York
+time after each US market day. `pipeline.produce_dividends` fetches a rolling
+provider snapshot and submits it as a dated delivery. An identical retry keeps
+the same delivery ID; changed provider content makes a new delivery. The
+05:30 deadline workflow checks the latest delivery's status and RAW row count
+separately from the validated NAV close. The dividend schedule uses the same
+`NORTHBRIDGE_DAILY_ENABLED` gate as the market producer and is still disabled.
+Dividend failures are visible without stopping the current price-and-trade NAV
+calculation, which has no dividend accounting yet.
