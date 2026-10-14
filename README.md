@@ -413,6 +413,19 @@ we called the repaired procedure to record `VALIDATED`. A repeat call returned
 `ALREADY_VALIDATED` without adding another run. This was a manual recovery, not
 an unattended end-to-end success; both automatic schedules remain disabled.
 
+The October 13 hosted delivery submitted 4 fictional trades, 8 settlement
+confirmations and 12,584 Massive closing prices. The first manual task graph
+run built the NAV but could not record it: replacing the record procedure had
+removed the task owner's `USAGE` grant. After restoring that grant, the second
+graph run succeeded through readiness, dbt build and recording. Snowflake now
+shows a `VALIDATED` October 13 close with NAV of $5,000,097.95 and
+$5,000,170.00 for accounts 01 and 02. The schedules remain disabled until a
+fresh day's graph runs without an intervening repair.
+
+Dividends and other corporate actions are outside the current daily close.
+The NAV above covers prices, simulated trades and their settlement cash; it
+does not accrue dividend entitlements or reconcile actual dividend payments.
+
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. A
 manual run with `submit=false` checks the runner, Massive login, Snowflake login
 and file preparation without loading records. Set `submit=true` only for a
