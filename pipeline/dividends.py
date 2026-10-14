@@ -1,4 +1,3 @@
-"""Load a saved Massive dividend snapshot without choosing an accounting version."""
 
 import argparse
 import hashlib
