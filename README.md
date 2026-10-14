@@ -426,6 +426,21 @@ Dividends and other corporate actions are outside the current daily close.
 The NAV above covers prices, simulated trades and their settlement cash; it
 does not accrue dividend entitlements or reconcile actual dividend payments.
 
+Dividend ingestion started with a separate October 13 provider snapshot. Run
+`python -m pipeline.massive_dividends 2026-10-13` to fetch the announcement
+window (30 days back, 45 days ahead). The saved folder contains the original
+API pages, a manifest with hashes, and one JSON line per provider event. Its
+delivery ID comes from the event content, so a retry with the same events does
+not create another RAW delivery; a changed event creates a new snapshot for
+review. `python -m pipeline.dividends <snapshot-folder> --submit` stages the
+evidence and loads the events into `RAW.DAILY_DIVIDEND_EVENTS`. The October 13
+snapshot loaded 7,520 events from two API pages; retrying it was a no-op.
+None of the four traded tickers has an October 13 ex-dividend event in this
+snapshot. The wider window also contains a September 15 KO event and a
+November 19 MSFT event. This RAW load does not select an accounting version,
+decide account eligibility, change NAV, or prove that cash was paid. The
+scheduled producer has not been connected to this new source yet.
+
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. A
 manual run with `submit=false` checks the runner, Massive login, Snowflake login
 and file preparation without loading records. Set `submit=true` only for a
