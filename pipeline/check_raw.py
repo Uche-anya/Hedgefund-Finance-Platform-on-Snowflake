@@ -5,6 +5,7 @@ from datetime import date
 
 from pipeline.load_day import REGISTRY, snowflake_connection
 from pipeline.prices import MARKET, TABLE as PRICE_TABLE
+from pipeline.check_dividend_deadline import dividend_readiness
 
 
 RAW_TABLE = {
@@ -104,6 +105,7 @@ def readiness(cursor, business_date, scenario, opening_date):
                 for source in ("opening_bank", "opening_admin")]
     price_ready, price_message = check_source(cursor, business_date, MARKET, "prices")
     results.append((price_ready, price_message))
+    results.append(dividend_readiness(cursor, business_date))
     if price_ready:
         results.append(check_held_prices(cursor, business_date, scenario))
     return results

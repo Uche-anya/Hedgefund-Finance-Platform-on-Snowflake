@@ -2,7 +2,7 @@
 
 import unittest
 
-from pipeline.check_dividend_deadline import check_dividends
+from pipeline.check_dividend_deadline import check_dividends, dividend_readiness
 
 
 class Cursor:
@@ -29,6 +29,12 @@ class DividendDeadlineTest(unittest.TestCase):
         for rows in cases:
             with self.subTest(rows=rows), self.assertRaises(RuntimeError):
                 check_dividends(Cursor(rows), "2026-10-13")
+
+    def test_older_loaded_delivery_does_not_release_newer_prepared_one(self):
+        rows = [("new", 3, "PREPARED", 0), ("old", 3, "LOADED", 3)]
+        ready, message = dividend_readiness(Cursor(rows), "2026-10-13")
+        self.assertFalse(ready)
+        self.assertIn("new", message)
 
     def test_empty_market_snapshot_fails(self):
         with self.assertRaises(RuntimeError):

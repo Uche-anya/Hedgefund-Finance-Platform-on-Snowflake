@@ -485,9 +485,10 @@ at 05:30 New York time. It skips weekends and reviewed market holidays. A
 missing close makes that GitHub run fail; delivery to a person's email or web
 notifications depends on their GitHub notification settings. The workflow and
 the producer schedule both remain gated by `NORTHBRIDGE_DAILY_ENABLED`.
-GitHub's scheduled workflows can start late, and the producer still makes only
-one scheduled attempt to fetch and submit a market day. A failed producer
-therefore needs an operator to retry it. The trial resource monitor remains a
+GitHub's scheduled workflows can start late. The market producer attempts the
+same date at 00:17 and 01:17 New York time; the second attempt can recover a
+late provider response without changing a saved delivery. A changed price
+delivery or a failure after both attempts still needs an operator. The trial resource monitor remains a
 hard cost stop, not a pipeline error to bypass.
 
 ## An OMS conflict drill
@@ -580,8 +581,13 @@ the same delivery ID; changed provider content makes a new delivery. The
 row count separately from the validated NAV close. The dividend schedule uses
 its own `NORTHBRIDGE_DIVIDENDS_ENABLED` gate; the market producer and NAV task
 remain under their existing controls.
-Dividend failures are visible without stopping the current price-and-trade NAV
-calculation, which has no dividend accounting yet.
+The close readiness procedure also checks the latest dividend delivery for
+the same market date. It returns `WAITING_DIVIDENDS` if that delivery is
+missing, incomplete, or replaced by a newer unfinished one. This holds the
+dbt close until the new snapshot is present. A dbt test confirms its staging
+view consumed the dated snapshot. Dividend amounts still do not enter NAV;
+this gate ensures the accounting team has the announcement evidence when the
+daily close is calculated.
 
 The daily fetch covers a 75-day ex-date window. A market-wide empty response
 fails the delivery; zero events for the fund within an otherwise complete

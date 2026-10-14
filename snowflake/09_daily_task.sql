@@ -3,6 +3,42 @@
 -- Keep the root suspended until the hosted producer and task have been tested.
 USE ROLE NORTHBRIDGE_DBT_DEV;
 
+CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DIVIDEND_INPUT(
+    CLOSE_DATE DATE)
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+    delivery_count NUMBER;
+    ready_count NUMBER;
+BEGIN
+    SELECT COUNT(*), COUNT_IF(
+        d.status = 'LOADED' AND d.expected_rows > 0
+        AND d.expected_rows = COALESCE(r.loaded_rows, 0))
+      INTO :delivery_count, :ready_count
+    FROM (
+        SELECT stage_path, expected_rows, status
+        FROM NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES
+        WHERE source_name = 'dividends' AND scenario_id = 'massive'
+          AND business_date = :CLOSE_DATE
+        QUALIFY ROW_NUMBER() OVER (
+            ORDER BY registered_at DESC, delivery_id DESC) = 1
+    ) d
+    LEFT JOIN (
+        SELECT source_file, COUNT(*) AS loaded_rows
+        FROM NORTHBRIDGE_DEV.RAW.DAILY_DIVIDEND_EVENTS
+        GROUP BY source_file
+    ) r ON ENDSWITH(r.source_file, d.stage_path);
+
+    IF (delivery_count != 1 OR COALESCE(ready_count, 0) != 1) THEN
+        RETURN 'WAITING_DIVIDENDS';
+    END IF;
+    RETURN 'READY';
+END;
+$$;
+
 CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DAILY_INPUTS(
     CLOSE_DATE DATE, SCENARIO VARCHAR, OPENING_DATE DATE)
 RETURNS VARCHAR
@@ -16,6 +52,7 @@ DECLARE
     missing_prices NUMBER;
     completed_count NUMBER;
     state VARCHAR;
+    dividend_state VARCHAR;
 BEGIN
     SELECT COUNT(*) INTO :completed_count
     FROM NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS
@@ -63,6 +100,12 @@ BEGIN
     IF (source_count != 5 OR ready_count != 5) THEN
         state := 'WAITING_INPUTS';
         RETURN state;
+    END IF;
+
+    CALL NORTHBRIDGE_DEV.DBT_DEV.CHECK_DIVIDEND_INPUT(:CLOSE_DATE)
+        INTO :dividend_state;
+    IF (dividend_state != 'READY') THEN
+        RETURN dividend_state;
     END IF;
 
     SELECT COUNT(*) INTO :missing_prices
@@ -172,6 +215,7 @@ CREATE OR ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD
     WAREHOUSE = COMPUTE_WH
     AFTER NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY
     WHEN SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_INPUTS'
+     AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_DIVIDENDS'
      AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_PRICES'
      AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'ALREADY_VALIDATED'
 AS

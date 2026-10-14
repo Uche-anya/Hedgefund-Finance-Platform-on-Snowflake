@@ -12,7 +12,7 @@ DELIVERIES = "NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES"
 EVENTS = "NORTHBRIDGE_DEV.RAW.DAILY_DIVIDEND_EVENTS"
 
 
-def check_dividends(cursor, business_date):
+def dividend_readiness(cursor, business_date):
     cursor.execute(
         "SELECT d.delivery_id, d.expected_rows, d.status, COUNT(r.source_file) "
         "FROM " + DELIVERIES + " d LEFT JOIN " + EVENTS + " r "
@@ -25,13 +25,20 @@ def check_dividends(cursor, business_date):
     )
     rows = cursor.fetchall()
     if not rows:
-        raise RuntimeError("No dividend delivery for {}".format(business_date))
+        return False, "No dividend delivery for {}".format(business_date)
     delivery_id, expected, status, loaded = rows[0]
     if not (status == "LOADED" and expected > 0 and loaded == expected):
-        raise RuntimeError("Latest dividend delivery {} is {}: expected {}, found {}".format(
-            delivery_id, status, expected, loaded))
-    print("Dividend delivery checked for {}: {} rows ({})".format(
-        business_date, loaded, delivery_id))
+        return False, "Latest dividend delivery {} is {}: expected {}, found {}".format(
+            delivery_id, status, expected, loaded)
+    return True, "Dividend delivery checked for {}: {} rows ({})".format(
+        business_date, loaded, delivery_id)
+
+
+def check_dividends(cursor, business_date):
+    ready, message = dividend_readiness(cursor, business_date)
+    if not ready:
+        raise RuntimeError(message)
+    print(message)
 
 
 def main():
