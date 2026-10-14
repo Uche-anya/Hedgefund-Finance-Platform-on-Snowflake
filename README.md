@@ -576,8 +576,14 @@ The dividend feed now has its own GitHub schedule at 00:25 and 01:25 New York
 time after each US market day. `pipeline.produce_dividends` fetches a rolling
 provider snapshot and submits it as a dated delivery. An identical retry keeps
 the same delivery ID; changed provider content makes a new delivery. The
-05:30 deadline workflow checks the latest delivery's status and RAW row count
-separately from the validated NAV close. The dividend schedule uses the same
-`NORTHBRIDGE_DAILY_ENABLED` gate as the market producer and is still disabled.
+05:35 dividend deadline workflow checks the latest delivery's status and RAW
+row count separately from the validated NAV close. The dividend schedule uses
+its own `NORTHBRIDGE_DIVIDENDS_ENABLED` gate; the market producer and NAV task
+remain under their existing controls.
 Dividend failures are visible without stopping the current price-and-trade NAV
 calculation, which has no dividend accounting yet.
+
+On 14 October, a hosted manual run loaded a newer 7,537-row snapshot for the
+October 13 market day. The deadline check matched all 7,537 RAW rows. The
+latest dbt views show three fund-relevant dividend events, all still waiting
+for security identity review; no dividend exposure was added to NAV.

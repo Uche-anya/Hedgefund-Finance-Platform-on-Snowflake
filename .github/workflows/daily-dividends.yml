@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   deliver:
-    if: github.event_name != 'schedule' || vars.NORTHBRIDGE_DAILY_ENABLED == 'true'
+    if: github.event_name != 'schedule' || vars.NORTHBRIDGE_DIVIDENDS_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

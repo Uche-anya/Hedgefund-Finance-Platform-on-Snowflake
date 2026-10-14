@@ -1,4 +1,4 @@
-name: Check daily close and dividend deadlines
+name: Check daily close deadline
 
 on:
   schedule:
@@ -58,14 +58,4 @@ jobs:
             python -m pipeline.check_close_deadline --business-date "$REQUESTED_DATE"
           else
             python -m pipeline.check_close_deadline
-          fi
-      - name: Check the dividend delivery
-        if: always()
-        env:
-          SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
-        run: |
-          if [ -n "$REQUESTED_DATE" ]; then
-            python -m pipeline.check_dividend_deadline --business-date "$REQUESTED_DATE"
-          else
-            python -m pipeline.check_dividend_deadline
           fi
