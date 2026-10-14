@@ -536,3 +536,29 @@ settings. It updates the project object without replacing its run history.
 3.27 uploader failed with `Cannot join path to a file` on Windows, so the
 deployment script uploads just the project source files to an internal stage
 and uses `CREATE DBT PROJECT` or `ALTER DBT PROJECT ... DEPLOY`.
+
+## Dividend review and expected cash
+
+`RAW.DAILY_DIVIDEND_EVENTS` keeps the Massive snapshots as received. The dbt
+`stg_dividends` view keeps the latest delivered version of each provider event
+ID. Its `terms_hash` changes if the ticker, dates, cash amount, currency or
+distribution type changes. `RAW.DIVIDEND_REVIEWS` holds dated human decisions
+for a specific event ID and hash; it starts empty. A changed event therefore
+returns to `PENDING` rather than inheriting approval for older terms.
+
+Review only events relevant to the traded securities and dates. Check the
+issuer and share-class identity, the provider event details, and whether a
+second payment on the same ex-date is genuinely separate. An `APPROVED` review
+must name the fund's `instrument_id`, reviewer and reason. Do not infer the
+security from a ticker alone. Keep rejected decisions as evidence.
+
+`fct_dividend_exposure` reads approved USD cash events and the account's signed
+shares at the previous validated market close. Long shares give an expected
+receivable; short shares give a potential payment obligation. This view does
+not confirm broker payment, post cash or alter NAV. It also cannot calculate
+an entitlement if the required prior close has not been validated. Payment
+matching and any NAV accrual need their own reviewed accounting rules.
+
+On 14 October 2026 the first snapshot produced 7,520 current events, all
+`PENDING`, and zero account exposures. That is the safe starting state: the
+provider feed has arrived, but no security mapping or event has been approved.

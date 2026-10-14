@@ -11,3 +11,5 @@ sources:
       - name: daily_opening_events
       - name: daily_deliveries
       - name: daily_dividend_events
+      - name: dividend_reviews
+      - name: daily_close_runs
