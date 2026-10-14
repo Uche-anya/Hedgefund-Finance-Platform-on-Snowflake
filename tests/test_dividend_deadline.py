@@ -30,8 +30,9 @@ class DividendDeadlineTest(unittest.TestCase):
             with self.subTest(rows=rows), self.assertRaises(RuntimeError):
                 check_dividends(Cursor(rows), "2026-10-13")
 
-    def test_registered_empty_delivery_passes(self):
-        check_dividends(Cursor([("empty", 0, "EMPTY", 0)]), "2026-10-13")
+    def test_empty_market_snapshot_fails(self):
+        with self.assertRaises(RuntimeError):
+            check_dividends(Cursor([("empty", 0, "EMPTY", 0)]), "2026-10-13")
 
 
 if __name__ == "__main__":

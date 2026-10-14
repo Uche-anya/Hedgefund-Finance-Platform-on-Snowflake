@@ -17,12 +17,14 @@ with matches as (
 select
     e.event_id, e.terms_hash, e.ticker, e.ex_dividend_date, e.pay_date,
     e.cash_amount, e.currency, e.distribution_type, e.terms_changed,
+    e.missing_from_latest_snapshot,
     e.review_status, e.instrument_id as reviewed_instrument_id,
     m.mapped_instrument_id as instrument_id, m.mapping_status,
     m.provider_cik, m.share_class_figi, e.delivery_id,
     case
         when m.mapping_count <> 1 then 'AMBIGUOUS_MAPPING'
         when e.review_status = 'REJECTED' then 'REJECTED'
+        when e.missing_from_latest_snapshot then 'MISSING_FROM_SNAPSHOT'
         when coalesce(m.mapping_status, '') <> 'APPROVED'
             then 'SECURITY_REVIEW'
         when e.review_status = 'APPROVED'

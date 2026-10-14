@@ -1,6 +1,15 @@
 -- Take the latest delivered version of each event. A review of an old
 -- version cannot approve a provider correction with changed terms.
-with received as (
+with latest_delivery as (
+    select delivery_id, business_date
+    from {{ source('raw', 'daily_deliveries') }}
+    where source_name = 'dividends' and scenario_id = 'massive'
+      and status = 'LOADED'
+      and business_date <= to_date('{{ var("business_date") }}')
+    qualify row_number() over (
+        order by business_date desc, registered_at desc, delivery_id desc
+    ) = 1
+), received as (
     select r.payload, r.source_file, r.loaded_at,
         d.delivery_id, d.business_date as snapshot_date, d.registered_at
     from {{ source('raw', 'daily_dividend_events') }} r
@@ -46,8 +55,13 @@ with received as (
     ) = 1
 )
 select e.*,
+    e.delivery_id <> l.delivery_id
+      and e.ex_dividend_date between dateadd(day, -30, l.business_date)
+                                 and dateadd(day, 45, l.business_date)
+        as missing_from_latest_snapshot,
     coalesce(r.decision, 'PENDING') as review_status,
     r.instrument_id, r.reviewer, r.reason as review_reason, r.reviewed_at
 from current_events e
+cross join latest_delivery l
 left join last_review r
     on r.event_id = e.event_id and r.terms_hash = e.terms_hash

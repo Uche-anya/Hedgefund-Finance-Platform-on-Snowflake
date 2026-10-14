@@ -16,6 +16,8 @@ def run(business_date, data_dir, submit):
 
     folder = massive_dividends.fetch(business_date, data_dir)
     item = dividends.prepare(folder)
+    if item["rows"] == 0:
+        raise RuntimeError("Massive returned no dividends in the full date window")
     print("{}: {} dividend events saved".format(business_date, item["rows"]))
     if not submit:
         print("Saved files only; add --submit to load Snowflake")

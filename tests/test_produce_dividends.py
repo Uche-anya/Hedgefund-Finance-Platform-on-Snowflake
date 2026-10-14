@@ -38,6 +38,14 @@ class ProduceDividendsTest(unittest.TestCase):
             run("2026-10-11", Path("data"), True)
         fetch.assert_not_called()
 
+    @patch("pipeline.produce_dividends.snowflake_connection")
+    @patch("pipeline.produce_dividends.dividends.prepare", return_value={"rows": 0})
+    @patch("pipeline.produce_dividends.massive_dividends.fetch")
+    def test_empty_market_snapshot_is_not_submitted(self, fetch, prepare, connect):
+        with self.assertRaisesRegex(RuntimeError, "no dividends"):
+            run("2026-10-13", Path("data"), True)
+        connect.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

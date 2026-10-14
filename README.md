@@ -583,7 +583,15 @@ remain under their existing controls.
 Dividend failures are visible without stopping the current price-and-trade NAV
 calculation, which has no dividend accounting yet.
 
+The daily fetch covers a 75-day ex-date window. A market-wide empty response
+fails the delivery; zero events for the fund within an otherwise complete
+snapshot is normal. If a previously seen event disappears while its ex-date
+is still inside the newest request window, the review queue marks it
+`MISSING_FROM_SNAPSHOT` instead of treating the old announcement as ready.
+
 On 14 October, a hosted manual run loaded a newer 7,537-row snapshot for the
 October 13 market day. The deadline check matched all 7,537 RAW rows. The
 latest dbt views show three fund-relevant dividend events, all still waiting
 for security identity review; no dividend exposure was added to NAV.
+The separate dividend schedule was enabled on 14 October; the first scheduled
+run for the October 14 market day has not yet occurred.
