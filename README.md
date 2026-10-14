@@ -552,7 +552,16 @@ second payment on the same ex-date is genuinely separate. An `APPROVED` review
 must name the fund's `instrument_id`, reviewer and reason. Do not infer the
 security from a ticker alone. Keep rejected decisions as evidence.
 
-`fct_dividend_exposure` reads approved USD cash events and the account's signed
+`RAW.SECURITY_MAPPINGS` now registers the 20 fund securities with effective
+dates. They begin as `PENDING`, not approved identities. An approved mapping
+needs current CIK and share-class FIGI evidence, a reviewer and an evidence
+reference. `dividend_review_queue` shows only provider events that match this
+dated fund universe. Ordinary recurring USD cash events become `READY` after
+the security mapping is approved. Provider term changes, unusual distributions,
+invalid terms and ambiguous mappings stay in the exception queue. A per-event
+review can approve or reject those cases without altering RAW history.
+
+`fct_dividend_exposure` reads `READY` USD cash events and the account's signed
 shares at the previous validated market close. Long shares give an expected
 receivable; short shares give a potential payment obligation. This view does
 not confirm broker payment, post cash or alter NAV. It also cannot calculate
@@ -561,4 +570,4 @@ matching and any NAV accrual need their own reviewed accounting rules.
 
 On 14 October 2026 the first snapshot produced 7,520 current events, all
 `PENDING`, and zero account exposures. That is the safe starting state: the
-provider feed has arrived, but no security mapping or event has been approved.
+provider feed has arrived, but no security identity has been approved.

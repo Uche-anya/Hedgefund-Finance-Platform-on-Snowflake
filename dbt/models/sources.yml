@@ -13,3 +13,4 @@ sources:
       - name: daily_dividend_events
       - name: dividend_reviews
       - name: daily_close_runs
+      - name: security_mappings

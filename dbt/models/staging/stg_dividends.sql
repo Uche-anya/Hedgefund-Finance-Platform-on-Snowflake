@@ -10,7 +10,7 @@ with received as (
         and d.status = 'LOADED'
         and d.business_date <= to_date('{{ var("business_date") }}')
         and endswith(r.source_file, d.stage_path)
-), current_events as (
+), typed as (
     select
         payload:id::varchar as event_id,
         payload:ticker::varchar as ticker,
@@ -25,10 +25,14 @@ with received as (
             payload:record_date, payload:pay_date, payload:cash_amount,
             payload:currency, payload:distribution_type
         )), 256) as terms_hash,
-        delivery_id, snapshot_date, source_file, loaded_at
+        delivery_id, snapshot_date, registered_at, source_file, loaded_at
     from received
+), current_events as (
+    select *, count(distinct terms_hash) over (partition by event_id) > 1
+        as terms_changed
+    from typed
     qualify row_number() over (
-        partition by payload:id::varchar
+        partition by event_id
         order by snapshot_date desc, registered_at desc, delivery_id desc,
             loaded_at desc, source_file desc
     ) = 1

@@ -4,8 +4,8 @@
 
 with events as (
     select *
-    from {{ ref('stg_dividends') }}
-    where review_status = 'APPROVED'
+    from {{ ref('dividend_review_queue') }}
+    where processing_status = 'READY'
       and ex_dividend_date <= to_date('{{ var("business_date") }}')
       and cash_amount > 0
       and currency = 'USD'
