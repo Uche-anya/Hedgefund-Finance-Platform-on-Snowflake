@@ -14,6 +14,43 @@ RUNS = "NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS"
 PRICES = "NORTHBRIDGE_DEV.RAW.DAILY_PRICE_EVENTS"
 OMS = "NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS"
 
+# The first four names are the pilot. From October 14, each account trades
+# four names per session from a wider, fixed equity list.
+EXPANDED_FROM = date(2026, 10, 14)
+ORDER_BOOK = {
+    "SIM-ACCOUNT-01": (
+        ("AAPL", "BUY", 60, 8), ("AMZN", "SELL", 80, -6),
+        ("GOOGL", "BUY", 70, 5), ("META", "SELL", 30, -7),
+        ("NVDA", "BUY", 90, 4), ("V", "SELL", 55, -5),
+        ("MA", "BUY", 35, 6), ("COST", "SELL", 25, -4),
+        ("HD", "BUY", 75, 3), ("MCD", "SELL", 80, -3),
+    ),
+    "SIM-ACCOUNT-02": (
+        ("MSFT", "BUY", 45, 5), ("KO", "SELL", 170, -4),
+        ("JPM", "BUY", 65, 6), ("BAC", "SELL", 350, -6),
+        ("XOM", "BUY", 125, 4), ("JNJ", "SELL", 85, -4),
+        ("PG", "BUY", 130, 3), ("WMT", "SELL", 180, -3),
+        ("PEP", "BUY", 160, 5), ("UNH", "SELL", 55, -5),
+    ),
+}
+
+
+def trades_for_day(day):
+    if day < EXPANDED_FROM:
+        return TRADES
+    sessions = 0
+    current = EXPANDED_FROM
+    while current < day:
+        if is_market_day(current):
+            sessions += 1
+        current += timedelta(days=1)
+    orders = []
+    for account, names in ORDER_BOOK.items():
+        start = sessions * 4
+        for number in range(4):
+            orders.append((account,) + names[(start + number) % len(names)])
+    return tuple(orders)
+
 
 def prior_close(cursor, business_date, scenario):
     cursor.execute(
@@ -38,8 +75,8 @@ def prior_close(cursor, business_date, scenario):
     return previous.isoformat()
 
 
-def prior_prices(cursor, previous):
-    tickers = sorted({trade[1] for trade in TRADES})
+def prior_prices(cursor, previous, business_date):
+    tickers = sorted({trade[1] for trade in trades_for_day(date.fromisoformat(business_date))})
     cursor.execute(
         "SELECT p.payload:universe_ticker::varchar, "
         "TRY_TO_DECIMAL(p.payload:close_price::varchar, 38, 9) "
@@ -98,9 +135,13 @@ def write_day(business_date, scenario, data_dir, previous, closes, due_trades):
         raise ValueError("Expected a market day after the previous close")
     if due_trades and not is_settlement_day(day):
         raise ValueError("Cannot confirm settlements on a settlement holiday")
+    planned = trades_for_day(day)
+    missing = sorted({trade[1] for trade in planned} - set(closes))
+    if missing:
+        raise ValueError("Previous close missing for {}".format(", ".join(missing)))
     due = next_settlement_day(day).isoformat()
     trades = []
-    for number, (account, ticker, side, quantity, offset) in enumerate(TRADES, 1):
+    for number, (account, ticker, side, quantity, offset) in enumerate(planned, 1):
         price = (closes[ticker] * (Decimal(1) + Decimal(offset) / 10000)).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP)
         executed = datetime.combine(day, time(15, number), timezone.utc)
@@ -122,6 +163,8 @@ def write_day(business_date, scenario, data_dir, previous, closes, due_trades):
             "reference_price_date": previous,
             "reference_close_price": str(closes[ticker]), "price_offset_bps": offset,
         })
+        if day >= EXPANDED_FROM:
+            trades[-1]["simulator_plan_id"] = "equity_20_20261014"
     save(data_dir / "daily_oms" / scenario / business_date, "oms.jsonl", trades,
          {"business_date": business_date, "scenario_id": scenario,
           "is_simulated": True, "source_system": "simulated_oms",

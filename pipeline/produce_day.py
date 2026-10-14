@@ -34,7 +34,7 @@ def run(business_date, scenario, data_dir, submit):
     with load_day.snowflake_connection() as connection:
         with connection.cursor() as cursor:
             previous = daily_simulator.prior_close(cursor, business_date, scenario)
-            closes = daily_simulator.prior_prices(cursor, previous)
+            closes = daily_simulator.prior_prices(cursor, previous, business_date)
             due = daily_simulator.unsettled_trades(cursor, business_date, scenario)
             trades, settlements = daily_simulator.write_day(
                 business_date, scenario, data_dir, previous, closes, due)

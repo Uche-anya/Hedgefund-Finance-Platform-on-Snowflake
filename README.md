@@ -422,6 +422,18 @@ shows a `VALIDATED` October 13 close with NAV of $5,000,097.95 and
 $5,000,170.00 for accounts 01 and 02. The schedules remain disabled until a
 fresh day's graph runs without an intervening repair.
 
+From October 14 onward the fictional trading plan covers 20 US equities rather
+than the four-name pilot. Each account makes four orders per market day from
+its ten-name list, with two buys and two sells in each four-order group. The
+rotation reaches all 20 names within three market sessions. It uses the
+previous validated Massive close for each selected ticker, and stops before
+writing a delivery if one is missing. Earlier dates still generate their
+original four trades. New executions carry `simulator_plan_id=equity_20_20261014`
+so the saved event identifies the plan used. This is a simulation for testing a
+broader position and settlement pipeline, not an investment strategy. The
+October 13 Massive delivery had a close for all 20 names; the October 14
+delivery has not been run yet.
+
 Dividends and other corporate actions are outside the current daily close.
 The NAV above covers prices, simulated trades and their settlement cash; it
 does not accrue dividend entitlements or reconcile actual dividend payments.
