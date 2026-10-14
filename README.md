@@ -374,15 +374,16 @@ price-file format and should not be submitted again using the new format.
 `NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY` is the deployed dbt project object.
 The Snowflake task graph has three steps:
 
-1. `DAILY_CLOSE_READY` checks the five registered sources and held-stock prices.
+1. `DAILY_CLOSE_READY` checks the fund and market deliveries, including the
+   latest dividend snapshot for the close date, and held-stock prices.
 2. `DAILY_CLOSE_BUILD` runs `dbt build` only when the first step says ready.
 3. `DAILY_CLOSE_RECORD` checks for two NAV rows and records a validated run.
 
 The manual October 9 graph run succeeded through all three tasks. Its NAV rows
 were $4,999,900.55 and $5,000,086.40 for accounts 01 and 02. Snowflake's task
 history showed `READY:2026-10-09` followed by successful dbt and record tasks.
-This is a checked calculation, not NAV publication. The root schedule remains
-suspended. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
+This was a checked calculation, not NAV publication. The root schedule was
+suspended at that point. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
 the warehouse stopped until the quota was reviewed and raised.
 
 The manual GitHub producer run for October 9 passed with `submit=false` on
@@ -391,16 +392,6 @@ The hosted runner fetched 12,598 Massive bars, read Snowflake's previous close
 and prepared four fictional trades and four settlements. It did not submit new
 RAW data or run the dbt task graph. The first full hosted submission must use
 a new market day after its close is available.
-
-For the October 12 check, wait until Massive has published the completed US
-close. Dispatch `daily-producer.yml` with `business_date=2026-10-12` and
-`submit=true`. Then run `snowflake/11_verify_october_close.sql`; its readiness
-call should return `READY:2026-10-12`. If it says `WAITING_INPUTS`, give
-Snowpipe time to load and check again. Only when it is ready, run
-`snowflake/10_test_october_close.sql` to execute the task graph once. Run the
-verification file again: it should show two NAV rows and a `VALIDATED` close
-run. Leave the scheduled root task suspended until this hosted submission and
-task run both pass.
 
 On 13 October 2026, the hosted October 12 delivery completed with 4 fictional
 trades, 0 settlements and 12,602 Massive closing prices. RAW readiness returned
@@ -411,7 +402,7 @@ Snowflake rejected `UUID_STRING()` inside its `INSERT ... VALUES` statement.
 `INSERT ... SELECT`. After checking both NAV rows and the successful dbt task,
 we called the repaired procedure to record `VALIDATED`. A repeat call returned
 `ALREADY_VALIDATED` without adding another run. This was a manual recovery, not
-an unattended end-to-end success; both automatic schedules remain disabled.
+an unattended end-to-end success; both automatic schedules were left disabled.
 
 The October 13 hosted delivery submitted 4 fictional trades, 8 settlement
 confirmations and 12,584 Massive closing prices. The first manual task graph
@@ -419,8 +410,8 @@ run built the NAV but could not record it: replacing the record procedure had
 removed the task owner's `USAGE` grant. After restoring that grant, the second
 graph run succeeded through readiness, dbt build and recording. Snowflake now
 shows a `VALIDATED` October 13 close with NAV of $5,000,097.95 and
-$5,000,170.00 for accounts 01 and 02. The schedules remain disabled until a
-fresh day's graph runs without an intervening repair.
+$5,000,170.00 for accounts 01 and 02. The schedules were held disabled while
+the dividend gate was added.
 
 From October 14 onward the fictional trading plan covers 20 US equities rather
 than the four-name pilot. Each account makes four orders per market day from
@@ -434,7 +425,7 @@ broader position and settlement pipeline, not an investment strategy. The
 October 13 Massive delivery had a close for all 20 names; the October 14
 delivery has not been run yet.
 
-Dividends and other corporate actions are outside the current daily close.
+Dividend announcements are now a required input to the daily close.
 The NAV above covers prices, simulated trades and their settlement cash; it
 does not accrue dividend entitlements or reconcile actual dividend payments.
 
@@ -451,15 +442,14 @@ None of the four traded tickers has an October 13 ex-dividend event in this
 snapshot. The wider window also contains a September 15 KO event and a
 November 19 MSFT event. This RAW load does not select an accounting version,
 decide account eligibility, change NAV, or prove that cash was paid. The
-scheduled producer has not been connected to this new source yet.
+scheduled producer had not been connected to this source at that point.
 
 The hosted producer is defined in `.github/workflows/daily-producer.yml`. A
 manual run with `submit=false` checks the runner, Massive login, Snowflake login
 and file preparation without loading records. Set `submit=true` only for a
-reviewed new market day. A scheduled run is defined for 00:17 New York time
-Tuesday through Saturday, but its job is gated by the repository variable
-`NORTHBRIDGE_DAILY_ENABLED=true`. Do not set that variable until the hosted
-submission and dbt task pass together. The scheduled runner chooses yesterday
+reviewed new market day. Scheduled attempts run at 00:17 and 01:17 New York
+time Tuesday through Saturday. The job is gated by the repository variable
+`NORTHBRIDGE_DAILY_ENABLED`, enabled on 14 October 2026. The runner chooses yesterday
 in New York and skips it if the reviewed NYSE calendar says the market was
 closed. A manual request for a closed date still fails, so a mistyped date is
 visible. The GitHub
@@ -469,8 +459,8 @@ base64 form of the loader service user's private key. Do not put that key in
 the repository. A separate workflow service key is preferable when this is
 operated beyond the portfolio pilot.
 
-The Snowflake root task now checks at 02:00, 03:00, 04:00 and 05:00 New York
-time Tuesday through Saturday, but remains suspended. If Snowpipe is still
+The Snowflake root task checks at 02:00, 03:00, 04:00 and 05:00 New York
+time Tuesday through Saturday. It was resumed on 14 October 2026. If Snowpipe is still
 loading at the first check, a later check can start the close. Its schedule
 does not select Saturday or Sunday as a business date. On a market holiday,
 missing inputs leave the dbt child task idle. When inputs are ready, the task
@@ -484,7 +474,8 @@ The `daily-close-deadline.yml` workflow checks for exactly one validated close
 at 05:30 New York time. It skips weekends and reviewed market holidays. A
 missing close makes that GitHub run fail; delivery to a person's email or web
 notifications depends on their GitHub notification settings. The workflow and
-the producer schedule both remain gated by `NORTHBRIDGE_DAILY_ENABLED`.
+the producer schedule are gated by `NORTHBRIDGE_DAILY_ENABLED`, which was set
+to `true` on 14 October 2026.
 GitHub's scheduled workflows can start late. The market producer attempts the
 same date at 00:17 and 01:17 New York time; the second attempt can recover a
 late provider response without changing a saved delivery. A changed price
@@ -533,7 +524,7 @@ To redeploy dbt source after a reviewed change, run
 `python -m scripts.deploy_dbt_project` with the dbt service key environment
 settings. It updates the project object without replacing its run history.
 `snowflake/09_task_access.sql` holds the role grants and
-`snowflake/09_daily_task.sql` holds the suspended task graph. The Snowflake CLI
+`snowflake/09_daily_task.sql` holds the task graph definition. The Snowflake CLI
 3.27 uploader failed with `Cannot join path to a file` on Windows, so the
 deployment script uploads just the project source files to an internal stage
 and uses `CREATE DBT PROJECT` or `ALTER DBT PROJECT ... DEPLOY`.

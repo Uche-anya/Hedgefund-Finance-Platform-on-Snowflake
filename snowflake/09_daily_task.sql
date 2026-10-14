@@ -1,6 +1,6 @@
 -- Deploy the dbt project into NORTHBRIDGE_DEV.DBT_DEV before running this file.
 -- The task owner needs CREATE TASK/PROCEDURE on DBT_DEV and EXECUTE TASK on account.
--- Keep the root suspended until the hosted producer and task have been tested.
+-- To change this task graph later, suspend the root first; resume it after checks.
 USE ROLE NORTHBRIDGE_DBT_DEV;
 
 CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DIVIDEND_INPUT(
@@ -236,7 +236,7 @@ AS
         TO_DATE(SUBSTR(SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY'), 7)),
         'sim-close-20261008', '2026-10-07'::date);
 
--- Activate only after a manual task run validates the producer and dbt project.
+-- The root was resumed on 2026-10-14 after the hosted producer and dbt checks.
 -- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_RECORD RESUME;
 -- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD RESUME;
 -- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY RESUME;
