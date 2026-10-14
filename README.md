@@ -591,7 +591,16 @@ is still inside the newest request window, the review queue marks it
 
 On 14 October, a hosted manual run loaded a newer 7,537-row snapshot for the
 October 13 market day. The deadline check matched all 7,537 RAW rows. The
-latest dbt views show three fund-relevant dividend events, all still waiting
-for security identity review; no dividend exposure was added to NAV.
+latest dbt views showed three fund-relevant events: PG, MSFT and JNJ. On 14
+October we checked their dated Massive ticker details with
+`python -m pipeline.security_reference 2026-10-14 PG MSFT JNJ`; MSFT was also
+checked against the simulator's 8 October start date. Response JSON and a
+compact CSV are saved under `data/security_reference/`, and the provider
+request IDs are recorded in `RAW.SECURITY_MAPPINGS`. The reviewed SQL is
+`snowflake/17_review_dividend_securities.sql`. It approved only these three
+simulated instrument mappings; the other 17 remain `PENDING`. This mapping
+uses the simulator's ticker-based IDs, not an independent broker security
+master. The three events are now `READY`, but their ex-dates are in the future.
+There are no account exposures yet and no dividend cash has been added to NAV.
 The separate dividend schedule was enabled on 14 October; the first scheduled
 run for the October 14 market day has not yet occurred.
