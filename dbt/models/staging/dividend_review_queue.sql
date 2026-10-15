@@ -30,7 +30,8 @@ select
         when e.review_status = 'APPROVED'
              and e.instrument_id <> m.mapped_instrument_id
             then 'IDENTITY_CONFLICT'
-        when e.ex_dividend_date is null or e.cash_amount is null
+        when e.ex_dividend_date is null or e.pay_date is null
+             or e.pay_date < e.ex_dividend_date or e.cash_amount is null
              or e.cash_amount <= 0 or e.currency <> 'USD'
             then 'INVALID_TERMS'
         when e.review_status = 'APPROVED' then 'READY'

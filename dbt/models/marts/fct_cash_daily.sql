@@ -1,6 +1,7 @@
 -- Trade cash is owed from trade date; settlement moves it into modeled cash.
 {{ config(materialized='incremental', incremental_strategy='merge',
-          unique_key=['valuation_date', 'scenario_id', 'account_id']) }}
+          unique_key=['valuation_date', 'scenario_id', 'account_id'],
+          on_schema_change='append_new_columns') }}
 
 with days as (
     select distinct valuation_date
@@ -39,12 +40,18 @@ with days as (
     group by 1, 2, 3, 4
 )
 select
-    valuation_date,
-    scenario_id,
-    account_id,
-    opening_cash,
-    trade_cash_total,
-    settled_trade_cash,
-    opening_cash + settled_trade_cash as calculated_cash_balance,
-    trade_cash_total - settled_trade_cash as unsettled_trade_cash
-from cash_by_day
+    c.valuation_date,
+    c.scenario_id,
+    c.account_id,
+    c.opening_cash,
+    c.trade_cash_total,
+    c.settled_trade_cash,
+    coalesce(v.modeled_dividend_cash_to_date, 0) as modeled_dividend_cash_to_date,
+    c.opening_cash + c.settled_trade_cash
+        + coalesce(v.modeled_dividend_cash_to_date, 0) as calculated_cash_balance,
+    c.trade_cash_total - c.settled_trade_cash as unsettled_trade_cash
+from cash_by_day c
+left join {{ ref('fct_dividend_daily') }} v
+    on v.valuation_date = c.valuation_date
+    and v.scenario_id = c.scenario_id
+    and v.account_id = c.account_id

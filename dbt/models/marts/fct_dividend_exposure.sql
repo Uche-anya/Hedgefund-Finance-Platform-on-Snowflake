@@ -1,12 +1,13 @@
--- Expected cash from approved events, using shares held at the prior
--- validated close. This is not a broker payment or a NAV accrual.
-{{ config(materialized='view') }}
+-- Book one entitlement per account on the ex-date. Later runs keep the row;
+-- a provider correction needs a reviewed restatement, not a silent rewrite.
+{{ config(materialized='incremental', incremental_strategy='merge',
+          unique_key=['event_id', 'scenario_id', 'account_id']) }}
 
 with events as (
     select *
     from {{ ref('dividend_review_queue') }}
     where processing_status = 'READY'
-      and ex_dividend_date <= to_date('{{ var("business_date") }}')
+      and ex_dividend_date = to_date('{{ var("business_date") }}')
       and cash_amount > 0
       and currency = 'USD'
 ), prior_session as (
@@ -37,3 +38,11 @@ join {{ ref('fct_position_daily') }} p
     on p.valuation_date = s.valuation_date
     and p.scenario_id = '{{ var("scenario_id") }}'
     and p.instrument_id = e.instrument_id
+{% if is_incremental() %}
+where not exists (
+    select 1 from {{ this }} booked
+    where booked.event_id = e.event_id
+      and booked.scenario_id = p.scenario_id
+      and booked.account_id = p.account_id
+)
+{% endif %}

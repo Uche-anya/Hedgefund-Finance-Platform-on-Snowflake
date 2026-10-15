@@ -211,9 +211,9 @@ The bank amount is starting cash. The subscription checks it; we do not add
 the subscription a second time. `stg_settlements` reads the simulated
 confirmation amount with its sign: buys are negative cash and sells are
 positive. `fct_cash_daily` moves that amount from unsettled trade cash into
-calculated cash when settlement occurs. `fct_nav_daily` then adds calculated
-cash, unsettled trade cash and the net value of stock positions. The latter
-includes negative values for short positions.
+calculated cash when settlement occurs. `fct_nav_daily` adds calculated cash,
+unsettled trade cash, the net value of stock positions and open dividend
+entitlements. Short stock positions and short dividend exposure reduce NAV.
 
 The 25 September build completed with 28 passing dbt results. Account
 `SIM-REPLAY-01` had $5,006,079.04 calculated cash, $2,044.19 unsettled trade
@@ -425,9 +425,10 @@ broader position and settlement pipeline, not an investment strategy. The
 October 13 Massive delivery had a close for all 20 names; the October 14
 delivery has not been run yet.
 
-Dividend announcements are now a required input to the daily close.
-The NAV above covers prices, simulated trades and their settlement cash; it
-does not accrue dividend entitlements or reconcile actual dividend payments.
+Dividend announcements are now a required input to the daily close. The
+October 13 NAV predates dividend booking, and no eligible event had reached
+its ex-date then. The current model includes expected entitlements when they
+arise, but does not reconcile actual dividend payments.
 
 Dividend ingestion started with a separate October 13 provider snapshot. Run
 `python -m pipeline.massive_dividends 2026-10-13` to fetch the announcement
@@ -553,12 +554,23 @@ the security mapping is approved. Provider term changes, unusual distributions,
 invalid terms and ambiguous mappings stay in the exception queue. A per-event
 review can approve or reject those cases without altering RAW history.
 
-`fct_dividend_exposure` reads `READY` USD cash events and the account's signed
-shares at the previous validated market close. Long shares give an expected
-receivable; short shares give a potential payment obligation. This view does
-not confirm broker payment, post cash or alter NAV. It also cannot calculate
-an entitlement if the required prior close has not been validated. Payment
-matching and any NAV accrual need their own reviewed accounting rules.
+`fct_dividend_exposure` books each `READY` USD cash event once per account on
+its ex-date, using signed shares at the previous validated market close. It
+keeps the event ID, provider terms hash and eligible share count so the amount
+can be traced back to the real announcement and the position used. Long shares
+create a receivable and positive dividend P&L; short shares create a liability
+and negative dividend P&L. `fct_dividend_daily` carries the open amount until
+the announced pay date. From the first market close on or after that date,
+`fct_cash_daily` includes it in **modeled** cash and clears the open amount;
+`fct_nav_daily` includes cash and the still-open receivable or liability.
+
+This is the simulation's expected accounting, not evidence of a broker cash
+payment. A real fund would reconcile the payment against an independent broker
+or bank statement and deal with tax, payment changes and payments in lieu on
+short positions. If Massive changes a booked event's terms, the dbt check
+stops the close for a reviewed restatement instead of silently overwriting the
+booked amount. A held stock with an unreviewed ex-date event also stops the
+close. Neither an announcement nor a future pay date is a confirmed receipt.
 
 On 14 October 2026 the first snapshot produced 7,520 current events, all
 `PENDING`, and zero account exposures. That is the safe starting state: the
@@ -576,9 +588,7 @@ The close readiness procedure also checks the latest dividend delivery for
 the same market date. It returns `WAITING_DIVIDENDS` if that delivery is
 missing, incomplete, or replaced by a newer unfinished one. This holds the
 dbt close until the new snapshot is present. A dbt test confirms its staging
-view consumed the dated snapshot. Dividend amounts still do not enter NAV;
-this gate ensures the accounting team has the announcement evidence when the
-daily close is calculated.
+view consumed the dated snapshot before accounting uses it.
 
 The daily fetch covers a 75-day ex-date window. A market-wide empty response
 fails the delivery; zero events for the fund within an otherwise complete
@@ -598,6 +608,8 @@ request IDs are recorded in `RAW.SECURITY_MAPPINGS`. The reviewed SQL is
 simulated instrument mappings; the other 17 remain `PENDING`. This mapping
 uses the simulator's ticker-based IDs, not an independent broker security
 master. The three events are now `READY`, but their ex-dates are in the future.
-There are no account exposures yet and no dividend cash has been added to NAV.
-The separate dividend schedule was enabled on 14 October; the first scheduled
-run for the October 14 market day has not yet occurred.
+There were no booked account exposures at the October 13 close. The dividend
+accounting models were built and deployed on 15 October. That build kept the
+two October 13 NAV values unchanged and passed all 34 dbt data checks. The
+first real ex-date and pay-date effects remain to be observed on future daily
+closes. The separate dividend schedule was enabled on 14 October.
