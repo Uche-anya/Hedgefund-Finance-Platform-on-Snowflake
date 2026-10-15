@@ -45,6 +45,15 @@ def put(cursor, path, file):
 
 def submit(cursor, item):
     cursor.execute(
+        "SELECT delivery_id FROM " + REGISTRY +
+        " WHERE source_name = 'dividends' AND scenario_id = 'massive' "
+        "AND business_date = %s", (item["date"],)
+    )
+    ids = [row[0] for row in cursor.fetchall()]
+    if ids and ids != [item["id"]]:
+        raise ValueError("Dividend snapshot changed; review before replacing it")
+
+    cursor.execute(
         "SELECT source_name, business_date, scenario_id, expected_rows, "
         "file_sha256, stage_path, status FROM " + REGISTRY + " WHERE delivery_id = %s",
         (item["id"],)

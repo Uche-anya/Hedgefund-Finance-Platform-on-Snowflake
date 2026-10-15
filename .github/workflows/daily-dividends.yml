@@ -2,7 +2,7 @@ name: Daily dividend delivery
 
 on:
   schedule:
-    - cron: '25 0,1 * * TUE-SAT'
+    - cron: '25 0-4 * * TUE-SAT'
       timezone: America/New_York
   workflow_dispatch:
     inputs:

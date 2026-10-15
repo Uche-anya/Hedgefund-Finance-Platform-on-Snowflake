@@ -32,6 +32,14 @@ class ProduceDividendsTest(unittest.TestCase):
         submit.assert_called_once_with(context.cursor.return_value.__enter__.return_value,
                                        item)
 
+    @patch("pipeline.produce_dividends.snowflake_connection")
+    @patch("pipeline.produce_dividends.massive_dividends.fetch")
+    def test_loaded_day_does_not_fetch_again(self, fetch, connect):
+        cursor = connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value
+        cursor.fetchall.return_value = [("LOADED",)]
+        run("2026-10-13", Path("data"), True)
+        fetch.assert_not_called()
+
     @patch("pipeline.produce_dividends.massive_dividends.fetch")
     def test_weekend_has_no_fetch(self, fetch):
         with self.assertRaises(ValueError):
@@ -44,7 +52,7 @@ class ProduceDividendsTest(unittest.TestCase):
     def test_empty_market_snapshot_is_not_submitted(self, fetch, prepare, connect):
         with self.assertRaisesRegex(RuntimeError, "no dividends"):
             run("2026-10-13", Path("data"), True)
-        connect.assert_not_called()
+        self.assertEqual(connect.call_count, 1)
 
 
 if __name__ == "__main__":

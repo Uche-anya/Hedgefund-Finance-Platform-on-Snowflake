@@ -9,6 +9,15 @@ from pipeline.check_day import closing_prices
 from pipeline.us_equity_calendar import is_market_day
 
 
+def close_is_validated(cursor, business_date, scenario):
+    cursor.execute(
+        "SELECT COUNT(*) FROM NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS "
+        "WHERE business_date = %s AND scenario_id = %s AND status = 'VALIDATED'",
+        (business_date, scenario)
+    )
+    return cursor.fetchone()[0] == 1
+
+
 def save_market_evidence(cursor, price_file, delivery_id):
     folder = price_file.parent
     target = ("@NORTHBRIDGE_DEV.RAW.DAILY_LANDING/provider_evidence/"
@@ -29,6 +38,14 @@ def run(business_date, scenario, data_dir, submit):
     day = date.fromisoformat(business_date)
     if not is_market_day(day):
         raise ValueError("No scheduled US equity close on this date")
+
+    if submit:
+        with load_day.snowflake_connection() as connection:
+            with connection.cursor() as cursor:
+                if close_is_validated(cursor, business_date, scenario):
+                    print("Close already validated for {}; no new delivery".format(
+                        business_date))
+                    return
 
     price_file = massive_prices.fetch(business_date, data_dir)
     with load_day.snowflake_connection() as connection:
