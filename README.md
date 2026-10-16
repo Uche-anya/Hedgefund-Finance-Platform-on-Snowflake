@@ -83,7 +83,8 @@ retry a delivery. A manual dispatch defaults to preparation only; choose
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
-To run the local Python checks:
+Pull requests and pushes to `main` run the Python tests and parse the dbt
+project in [CI](.github/workflows/ci.yml). To run the Python checks locally:
 
 ```powershell
 .\.venv\dbt\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
