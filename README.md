@@ -66,8 +66,9 @@ event rather than silently changing the booked amount.
 - dbt merges by business key and date. A validated date is not rebuilt by a
   later scheduled check.
 - The GitHub loader uses a restricted Snowflake service role and private key;
-  dbt uses a separate role. Secrets are kept outside Git. The development
-  warehouse has a resource monitor.
+  dbt uses a separate role. The loader can read validated closes but cannot
+  write them. Secrets are kept outside Git. The development warehouse has a
+  resource monitor.
 
 The [Snowflake SQL](snowflake) contains the RAW, access and task definitions.
 `pipeline.recover_file` is an operator path for a failed Snowpipe file, after
