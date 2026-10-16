@@ -40,3 +40,8 @@ and raise an alert if the delivery still has not arrived. Evaluate an
 independent producer trigger for the delivery deadline; repeated cron entries
 on GitHub alone do not guarantee it. Keep manual dispatch as a documented
 recovery path until a new close finishes unattended.
+
+The readiness task was extended through 07:00 New York time on October 16.
+The separate Snowflake 05:30 deadline task was deployed on October 16. A
+direct check returned `VALIDATED` for October 15 and `MARKET_CLOSED` for the
+reviewed July 3 holiday. Its first scheduled run is still to be observed.
