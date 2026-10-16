@@ -1,0 +1,15 @@
+# dbt parse needs a profile, but does not open a database connection.
+# These values must never be used for dbt run or dbt build.
+northbridge:
+  target: offline
+  outputs:
+    offline:
+      type: snowflake
+      account: offline
+      user: offline
+      password: offline
+      role: offline
+      warehouse: offline
+      database: NORTHBRIDGE_DEV
+      schema: DBT_DEV
+      threads: 1
