@@ -1,615 +1,103 @@
 # Northbridge daily close
 
-The aim is to run one fund close per business day. Market prices come from a
-real data provider. Trades, settlements, and fund activity
-are simulated because this portfolio project has no live broker or fund account.
-Every record keeps its source, so the two kinds of data are distinguishable.
+A daily US-equity fund close built on Snowflake and dbt. Massive supplies real
+closing prices and dividend announcements. A deterministic simulator supplies
+trades, settlement confirmations, opening bank balances and fund-admin records.
+The simulated records are marked as such; they are not independent broker or
+bank evidence. The output is a **validated calculation**, not a published NAV.
 
-The old two-year data is saved under `data/`. This reset starts with daily
-delivery checks and Snowpipe ingestion. The first cash and NAV calculation
-covers 24 and 25 September 2024.
+## Daily path
 
-## Check one saved day
+| Step | What runs | Result |
+| --- | --- | --- |
+| Produce | [GitHub Actions](.github/workflows) runs `pipeline.produce_day` and `pipeline.produce_dividends` after a US market day | Dated, hashed deliveries from Massive and the simulator |
+| Ingest | The loader registers delivery IDs and stages files in Snowflake. Snowpipe loads OMS and settlement events; checked `COPY` commands load prices and dividends | Immutable deliveries and row counts in `NORTHBRIDGE_DEV.RAW` |
+| Gate | `DAILY_CLOSE_READY` compares expected and loaded rows, checks the dividend snapshot and requires a valid close for every held stock | A ready date, or a reason to wait |
+| Build | `DAILY_CLOSE_BUILD` runs the deployed Snowflake dbt project | Typed staging views and incremental position, cash, dividend and NAV tables |
+| Record | `DAILY_CLOSE_RECORD` checks both account NAVs and records one `VALIDATED` close | An auditable calculation in `RAW.DAILY_CLOSE_RUNS` |
 
-From the project directory, run:
+The market producer is scheduled hourly from 00:17 to 04:17 New York time,
+Tuesday through Saturday; dividends run from 00:25 to 04:25. The Snowflake
+readiness task checks hourly from 02:00 to 07:00. A separate GitHub check
+fails if the prior market day's close is not validated by 05:30; the dividend
+delivery has a 05:35 check. The
+reviewed [2026 US equity calendar](config/us_equity_calendar_2026.json) skips
+market holidays and distinguishes them from settlement holidays.
 
-```powershell
-python -m pipeline.check_day 2024-09-25 --scenario sim-equity-2024-2026-v2 --prices data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae/prices.csv
-```
+GitHub's scheduler can be late. For the October 15, 2026 close, scheduled
+producer runs started after Snowflake's former 05:00 final check;
+[the incident record](incidents/2026-10-15-missed-producer.md)
+documents the manual recovery. The readiness window now extends to 07:00.
+`DAILY_CLOSE_DEADLINE` is a separate Snowflake task at 05:30. It fails in task
+history if the close is missing and skips reviewed market holidays. It was
+deployed on October 16; it does not send an external notification. A later
+successful close does not make a missed deadline timely.
 
-The check reads that day's OMS and settlement manifests. A manifest names the
-delivery, states how many records to expect, and stores a hash of the file.
-The hash tells us if the file has changed since it was prepared. The check
-also looks for that day's closing price for every stock traded that day.
-It exits with an error if an input is missing or inconsistent.
+## Data and models
 
-September 24 is the first trade day in the saved daily scenario. The opening
-package records cash on September 23, and there are no earlier saved trades.
-`pipeline.first_day_settlement` checked those facts and wrote an empty,
-zero-record settlement delivery. This is an explicit statement from our
-simulator; a missing delivery is never treated as zero. To check the saved day:
+The current fund scenario starts with two fictional accounts on October 7,
+2026. From October 14 the simulator rotates trades across 20 US equities. It
+uses the previous validated close and stops if the required prior prices or NAV
+are missing. Its settlement events are generated from its own trades; they do
+not prove that an outside custodian settled anything.
 
-```powershell
-python -m pipeline.check_day 2024-09-24 --scenario sim-equity-2024-2026-v2 --prices data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae/prices.csv
-```
+The [dbt project](dbt) keeps source typing in `stg_*` views and daily results
+in `fct_*` incremental tables. `fct_position_daily` carries signed shares and
+market values; `fct_cash_daily` tracks calculated and unsettled cash;
+`fct_nav_daily` combines cash, positions and open dividend amounts. Dividend
+models use dated security mappings and the prior eligible position to book
+long receivables or short liabilities on the ex-date. Cash movement on the pay
+date is **modeled**. There is no independent payment confirmation, tax or
+stock-borrow accounting.
 
-The producer refuses to overwrite the delivery if run again. The empty
-delivery has a hash and a manifest just like a nonempty one. It is still
-simulated evidence, not an independent custodian statement.
+Massive dividend events remain in RAW. The review queue separates ordinary
+events from changed terms, unusual distributions and uncertain security
+identity. As of October 16, 2026, three of the 20 simulated securities have
+approved mappings; the others remain pending. A ticker match alone does not approve a
+security. The dbt build stops if a held security has an unresolved relevant
+event rather than silently changing the booked amount.
 
-This is a local check of saved backfill data. For a daily run, the producer
-will put each delivery in a dated landing path. Snowpipe will copy landed
-records into Snowflake RAW tables. We will use warehouse readiness checks
-before scheduling dbt and publishing a NAV. A failed or late delivery must
-stop publication; retrying the same delivery must not add its records twice.
+## Reliability and access
 
-## Snowflake RAW landing
+- Delivery IDs and file hashes make retries repeatable. A changed price close
+  or conflicting same-version trade stops for review.
+- The readiness gate waits for Snowpipe row counts; a registered file is not
+  assumed to have loaded. Empty settlement deliveries are explicit.
+- dbt merges by business key and date. A validated date is not rebuilt by a
+  later scheduled check.
+- The GitHub loader uses a restricted Snowflake service role and private key;
+  dbt uses a separate role. Secrets are kept outside Git. The development
+  warehouse has a resource monitor.
 
-Snowflake CLI is installed under `.venv/cli`. To test the personal admin
-connection, run `.\.venv\cli\Scripts\python.exe scripts\snow_admin.py`. It reads the existing password
-from Windows Credential Manager, asks for an MFA approval if needed, and keeps
-the password out of the command line and config file. Run a SQL file with
-`.\.venv\cli\Scripts\python.exe scripts\snow_admin.py --file snowflake/00_remove_legacy.sql`.
-The loader uses a separate service user and key, with access only to ingestion
-objects.
+The [Snowflake SQL](snowflake) contains the RAW, access and task definitions.
+`pipeline.recover_file` is an operator path for a failed Snowpipe file, after
+checking copy history and confirming no RAW rows loaded. It is not part of the
+normal schedule.
 
-The cleanup ran on 8 October 2026. Its final inventory returned no tables,
-and a separate schema check found only `RAW` remaining from the three project
-schemas. Do not rerun it after new dbt models are built in `DBT_DEV`.
-This removed old Snowflake data, not the saved two-year source files under
-local `data/`.
+## Run and verify
 
-`snowflake/01_daily_raw.sql` creates two RAW event tables, a delivery registry,
-an internal stage, and two Snowpipe pipes. `snowflake/02_ingest_access.sql`
-grants a loader role access to those objects. `snowflake/03_loader_user.sql`
-creates the service user and assigns its public key. Run those files in that
-order with an administrator role. The registry is a list of expected deliveries
-and file hashes; it is not proof that Snowpipe finished.
-`snowflake/04_check_day.sql` compares expected row counts with rows in RAW.
-`snowflake/05_daily_prices.sql` adds the RAW price table and grants the loader
-access to it.
+The scheduled workflow is the normal producer. For a reviewed market date,
+use `workflow_dispatch` on `daily-producer.yml` and `daily-dividends.yml` to
+retry a delivery. A manual dispatch defaults to preparation only; choose
+`submit=true` to load it. The readiness task can then build the close. Inspect
+`RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
+the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
-The `01_daily_raw.sql`, `02_ingest_access.sql`, and `03_loader_user.sql` setup
-ran on 8 October 2026. The three tables started empty, both pipes were present,
-and the loader connected with its own key and `NORTHBRIDGE_INGEST_DEV` role.
-
-`pipeline.load_day` checks the local files and plans stable stage paths. Run it
-without `--submit` to see the paths without connecting:
-
-```powershell
-python -m pipeline.load_day 2024-09-24 --scenario sim-equity-2024-2026-v2 --prices data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae/prices.csv
-```
-
-With `--submit`, it registers the deliveries, uploads nonempty files to the
-internal stage, and asks Snowpipe to load them. The empty settlement delivery
-is recorded in the registry but has no event rows to load. A retry uses the
-same path and delivery ID; a changed file cannot reuse that ID. This assumes
-one producer owns each source and date. We still check RAW row counts before
-calling a day complete. `python -m pipeline.check_raw 2024-09-24 --scenario
-sim-equity-2024-2026-v2 --opening-date 2024-09-23` is the automated gate: it exits with an error if a
-source is missing, registered twice, or has the wrong number of RAW rows.
-
-The Python packages are installed in `.venv`. A new private key lives at
-`.secrets/northbridge_loader.p8`; Git ignores it, and its Windows file access
-is restricted. Only its public half appears in `03_loader_user.sql`. Set these
-environment values in the terminal that runs the loader:
+To run the local Python checks:
 
 ```powershell
-$env:SNOWFLAKE_ACCOUNT = 'gxmgyta-fq45953'
-$env:SNOWFLAKE_USER = 'NORTHBRIDGE_LOADER'
-$env:SNOWFLAKE_ROLE = 'NORTHBRIDGE_INGEST_DEV'
-$env:SNOWFLAKE_PRIVATE_KEY_FILE = (Resolve-Path '.secrets/northbridge_loader.p8').Path
+.\.venv\dbt\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
 ```
 
-Then add `--submit` to the `pipeline.load_day` command above and run
-`python -m pipeline.check_raw 2024-09-24 --scenario sim-equity-2024-2026-v2 --opening-date 2024-09-23`.
-The Snowpipe API uses the service user's default role; the setup SQL makes that
-the loader role. This key is unencrypted for unattended local development; in
-a hosted production deployment, keep it in a managed secret store. Corporate
-actions need their own daily readiness rule because some days legitimately
-have no actions.
-
-## First loading check
-
-The first submission for 24 September 2024 found an upload-path bug: `PUT`
-appended the filename to a destination that already contained it. Snowpipe
-registered the intended filename as failed and RAW stayed empty. The loader now
-uploads to the parent directory. We recovered that one file with
-`pipeline.recover_file`, which checks the registry and confirms RAW has no rows
-before making an explicit `COPY`. The 24 September RAW check then passed with
-four OMS rows and an explicitly empty settlement delivery. That recovery was a
-manual COPY, not a successful Snowpipe load.
-
-The next saved day, 25 September, used the corrected path. Snowflake copy
-history showed `DAILY_OMS_PIPE` loaded four OMS rows and
-`DAILY_SETTLEMENT_PIPE` loaded four settlement rows. A second submission
-reported that both deliveries were already submitted, and both counts stayed
-at four. These checks prove ingestion and retry behaviour for these two saved
-days. They do not yet prove an unattended daily schedule, dbt, or NAV publication.
-
-If a future pipe file fails, inspect `COPY_HISTORY` and the staged path first.
-Snowpipe remembers failed filenames and will ignore a second request for the
-same name. Only after confirming that RAW contains zero rows for the delivery,
-an operator can run `python -m pipeline.recover_file <date> --scenario
-<scenario> --source <oms|settlements>`. That command loads the file with a
-one-time `COPY`; it is not part of the normal daily run.
-
-## Real closing prices
-
-The saved `assembled_prices` CSV came from Massive. `pipeline.prices` extracts
-one market date into an immutable JSONL delivery and a manifest. It rejects
-duplicate tickers, non-USD rows, non-Massive rows, adjusted prices, and missing
-or nonpositive closes. The manifest records hashes of the source snapshot and
-daily file. The loader stages that file and uses one `COPY` to put its rows in
-`RAW.DAILY_PRICE_EVENTS`. The first three closes used a saved historical CSV.
-`pipeline.massive_prices` can now fetch a new dated CSV from Massive's grouped
-daily market endpoint and hand it to this same loader.
-
-The 24 and 25 September 2024 deliveries were loaded on 9 October 2026: 498
-real price rows per date. A repeat of 25 September found the existing delivery
-and left the count at 498. The updated `pipeline.check_raw` gate now requires
-one market delivery and one valid, unadjusted USD close for every nonzero
-holding. On 25 September it checked positions from both loaded trade days;
-eight stock tickers were involved. The four prices read back from Snowflake
-were AAPL 226.37, AMZN 192.53, BAC 39.25 and KO 71.45.
-
-To prepare or retry a saved day, set the loader environment variables above and
-run:
-
-```powershell
-python -m pipeline.prices 2024-09-25 --prices data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae/prices.csv --submit
-python -m pipeline.check_raw 2024-09-25 --scenario sim-equity-2024-2026-v2 --opening-date 2024-09-23
-```
-
-These are historical provider prices already saved locally. An unattended
-daily API fetch, corporate actions, security mapping and NAV
-publication remain separate work.
-
-## First dbt position values
-
-The first valuation layer starts with `stg_executions`, which
-types the simulated trades and keeps the latest report per execution ID.
-`stg_prices` types the Massive closes. `fct_position_daily` adds buys and
-subtracts sells through each price date, then multiplies the resulting shares
-by that day's close. A short position therefore has negative shares and a
-negative market value. These are position values, not account NAV; cash and
-liabilities are not included.
-
-The dbt service user has its own key and role. It can read the five RAW
-tables used by this pilot and create views or tables only in `DBT_DEV`. The private
-key is ignored by Git. Set its path before running dbt:
-
-```powershell
-$env:NORTHBRIDGE_DBT_KEY_PATH = (Resolve-Path '.secrets/northbridge_dbt.p8').Path
-.\.venv\dbt\Scripts\dbt.exe build --project-dir dbt --profiles-dir dbt --vars '{business_date: 2024-09-25, opening_date: 2024-09-23, scenario_id: sim-equity-2024-2026-v2}'
-```
-
-Run `pipeline.check_raw` first. A successful dbt build does not replace the
-delivery readiness gate. The first build produced 12 position rows across 24
-and 25 September 2024. For example, account `SIM-REPLAY-01` held 60 MSFT
-shares on both days; their values were 25,750.20 and 25,926.60 USD using each
-day's real close. The same account's 56-share UNH short had a negative value.
-
-This pilot joins the simulator's reviewed set of tickers directly to prices.
-Before using broader dates or securities, the daily path needs a reviewed
-instrument map for symbol changes and corporate actions. It also needs a
-scheduled readiness gate and NAV publication.
-
-## First cash and NAV
-
-The saved opening package has two bank balances of $5 million on 23 September
-and two matching fund-admin subscriptions. Run `snowflake/07_opening_cash.sql`
-once to create the RAW table and grant access. Then, with the loader settings
-above, load and check it:
-
-```powershell
-python -m pipeline.opening 2024-09-23 --scenario sim-equity-2024-2026-v2 --submit
-python -m pipeline.check_raw 2024-09-25 --scenario sim-equity-2024-2026-v2 --opening-date 2024-09-23
-```
-
-The bank amount is starting cash. The subscription checks it; we do not add
-the subscription a second time. `stg_settlements` reads the simulated
-confirmation amount with its sign: buys are negative cash and sells are
-positive. `fct_cash_daily` moves that amount from unsettled trade cash into
-calculated cash when settlement occurs. `fct_nav_daily` adds calculated cash,
-unsettled trade cash, the net value of stock positions and open dividend
-entitlements. Short stock positions and short dividend exposure reduce NAV.
-
-The 25 September build completed with 28 passing dbt results. Account
-`SIM-REPLAY-01` had $5,006,079.04 calculated cash, $2,044.19 unsettled trade
-cash and -$8,472.71 net stock value, yielding $4,999,650.52 NAV. Account
-`SIM-REPLAY-02` yielded $4,999,008.00. Query
-`NORTHBRIDGE_DEV.DBT_DEV.FCT_NAV_DAILY` to see both days.
-
-These are provisional pilot values. The settlement confirmations, opening bank
-balance and fund-admin events are simulated. There is no independent daily
-bank reconciliation, borrow-fee accrual, corporate-action accounting, or
-publication lock yet. The pipeline has not been scheduled to fetch daily
-market prices or run unattended.
-
-## Run the next saved close
-
-`pipeline.run_close` runs the 26 September pilot as one command. Use the
-project's main `.venv` Python: it contains the Snowpipe SDK. Set both the
-loader settings shown above and `NORTHBRIDGE_DBT_KEY_PATH`, then run:
-
-```powershell
-.\.venv\Scripts\python.exe -m pipeline.run_close 2024-09-26 --scenario sim-equity-2024-2026-v2 --opening-date 2024-09-23 --prices data/assembled_prices/fb25ddd9838840488e4c8b971ff7e0ae/prices.csv --submit
-```
-
-Without `--submit`, the command checks the saved files locally. With it, the
-controller submits OMS and settlement files to Snowpipe, loads the day's
-saved Massive prices, waits for the RAW delivery gate, runs `dbt build`, and
-checks that each opening account has one non-null NAV for that date. It writes
-one attempt to `RAW.DAILY_CLOSE_RUNS`: `VALIDATED`, `WAITING_INPUTS`, or
-`FAILED`. The full dbt output is kept under the ignored `data/close_runs/`
-folder. A retry uses the same delivery IDs and does not load their rows again;
-each attempt gets its own run log row.
-
-The 26 September pilot validated with 4 OMS rows, 4 settlement rows and 498
-price rows. Its NAVs were $4,998,968.43 and $4,999,577.67 for accounts 01
-and 02. The first attempt failed because it was launched from the dbt-only
-Python environment, which lacked the Snowpipe SDK. The retry from the main
-environment succeeded, and both outcomes are visible in `DAILY_CLOSE_RUNS`.
-`VALIDATED` means the calculations passed; it does not mean the NAV was
-published. The market prices here came from a previously saved Massive CSV.
-The API fetch was checked against a live Massive response for 2026-10-08.
-Running the controller on a schedule remains open.
-
-## Fetch a new market day
-
-`pipeline.massive_prices` requests one unadjusted US stock market summary from
-Massive. It saves `data/provider_prices/massive/<date>/prices.csv`, the provider
-response and a manifest with the request ID, count and file hashes. The key
-comes from `MASSIVE_API_KEY` in the process environment or Windows Credential
-Manager; it is never saved with the delivery. To save it once on this Windows
-machine, run the command below in your own terminal. It prompts without
-echoing the key:
-
-```powershell
-.\.venv\Scripts\python.exe scripts/save_massive_key.py
-```
-
-If the delivery already exists, a retry checks its hash and uses
-the saved file instead of requesting a different price snapshot.
-For 2026-10-08, the live request saved 12,592 unadjusted closes. The CSV had
-12,592 distinct tickers, its manifest hashes matched, and `pipeline.prices`
-prepared all 12,592 rows. The full close for this date is described below.
-
-With your key supplied privately to the terminal or job runner, check the
-API delivery for a date your Massive plan allows:
-
-```powershell
-.\.venv\Scripts\python.exe -m pipeline.massive_prices YYYY-MM-DD
-```
-
-The fetch checks the provider's `adjusted=false` flag, count, duplicate
-tickers and positive closes. The Snowflake RAW gate still checks that every
-held stock has that day's close before dbt runs.
-
-## October 2026 close using live prices
-
-This is a new, isolated scenario. It opens two fictional accounts with $5m
-each on 2026-10-07. `pipeline.sample_close` uses that day's saved Massive closes
-as a reference to make four fictional trades on 2026-10-08. It does not use the
-8 October close to invent earlier trades. All four are due to settle on
-9 October, so the 8 October settlement delivery is explicitly empty.
-
-```powershell
-.\.venv\Scripts\python.exe -m pipeline.massive_prices 2026-10-07
-.\.venv\Scripts\python.exe -m pipeline.massive_prices 2026-10-08
-.\.venv\Scripts\python.exe -m pipeline.sample_close 2026-10-08 --opening-date 2026-10-07 --settlement-due 2026-10-09 --scenario sim-close-20261008 --reference data/provider_prices/massive/2026-10-07/prices.csv
-.\.venv\Scripts\python.exe -m pipeline.run_close 2026-10-08 --scenario sim-close-20261008 --opening-date 2026-10-07 --prices data/provider_prices/massive/2026-10-08/prices.csv --submit
-```
-
-The last command needs the loader and dbt key environment variables shown
-above. It loaded two opening bank records, two opening subscriptions and
-12,592 real price rows. Snowpipe loaded four OMS events. The empty settlement
-delivery was registered without sending a file to Snowpipe. The RAW gate passed
-and dbt passed 29 build results. Account 01 ended at $5,000,063.30 NAV;
-account 02 ended at $4,999,901.12. The first run ID was
-`11f35956924a40d9a5ff30489994ecad`.
-
-A second run reused all five deliveries and returned the same NAVs. Snowflake
-recorded two `VALIDATED` attempts. The dbt price model now starts at the
-scenario's opening date, so this October close does not create NAV rows for
-the older market dates already present in RAW.
-
-This proves a live price fetch through a validated dev close. The trades,
-opening records and empty settlement delivery are fictional. There is no
-independent broker or bank reconciliation, NAV publication, or unattended
-schedule yet.
-
-## Keep each daily result
-
-The three dbt marts now merge one requested date into the existing tables.
-Position rows use date, scenario, account and instrument as their key. Cash and
-NAV rows use date, scenario and account. A rerun updates the same keys rather
-than adding another copy. The raw deliveries remain separate and unchanged.
-
-After converting the marts, we rebuilt the 8 October 2026 close and then ran
-the saved 24 and 25 September 2024 closes in order. All three dates remained
-in the marts: 16 position rows, 6 cash rows and 6 NAV rows. Retrying
-25 September left those counts unchanged and the NAV key test found no
-duplicates. Each build passed 31 dbt results. For example, the two account
-NAVs on 24 September were $4,999,618.60 and $4,999,680.20; on 25 September
-they were $4,999,650.52 and $4,999,008.00. The October NAVs remained
-$5,000,063.30 and $4,999,901.12.
-
-These tables hold the latest calculated value for each key. They do not keep
-the earlier calculated value if a correction changes that key. The run log
-records attempts, but an audit trail of NAV revisions and a publication
-decision are still separate work. A dbt full refresh would also rebuild from
-only the selected run's inputs, so it is not the normal daily command.
-
-## Daily runner and Snowflake task
-
-The October 9 close is the first run of the next-day path. `pipeline.produce_day`
-fetched 12,598 real, unadjusted Massive closes. It read the previous validated
-close and prices from Snowflake, saved four new fictional trades and four
-fictional confirmations for the October 8 trades, then submitted the two event
-files to Snowpipe. The price file went through the existing checked `COPY` path.
-The original Massive response, CSV and manifest were also saved in the internal
-stage under `provider_evidence/`.
-
-The producer is deliberately strict: a new day needs the previous market day's
-validated NAV. The reviewed 2026 calendar in `config/us_equity_calendar_2026.json`
-separates NYSE trading days from settlement days; a date outside that year stops
-until another calendar is reviewed. October 12 is a trading day but not a
-settlement day, so Friday's confirmations wait until October 13. The October 9
-pilot trades were generated before this correction and still say October 12 in
-their `settlement_due` field; they are held rather than falsely confirmed on
-that date. The four trades are a simple
-deterministic example, not a real trading strategy. Settlement confirmations
-come from those fictional trades, so they are not independent custodian proof.
-
-Prepared price deliveries now use the date, ticker and normalized price values
-for their content hash. Massive's request ID stays in the saved provider
-response, because a retry gets a new request ID even when the prices are the
-same. A retry with unchanged prices therefore has the same delivery ID; a
-changed close is stopped for review rather than silently replacing a RAW day.
-This applies to new deliveries. The October 9 pilot was loaded with the older
-price-file format and should not be submitted again using the new format.
-
-`NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY` is the deployed dbt project object.
-The Snowflake task graph has three steps:
-
-1. `DAILY_CLOSE_READY` checks the fund and market deliveries, including the
-   latest dividend snapshot for the close date, and held-stock prices.
-2. `DAILY_CLOSE_BUILD` runs `dbt build` only when the first step says ready.
-3. `DAILY_CLOSE_RECORD` checks for two NAV rows and records a validated run.
-
-The manual October 9 graph run succeeded through all three tasks. Its NAV rows
-were $4,999,900.55 and $5,000,086.40 for accounts 01 and 02. Snowflake's task
-history showed `READY:2026-10-09` followed by successful dbt and record tasks.
-This was a checked calculation, not NAV publication. The root schedule was
-suspended at that point. The existing `NORTHBRIDGE_DEV_MONITOR` later reached its quota, so
-the warehouse stopped until the quota was reviewed and raised.
-
-The manual GitHub producer run for October 9 passed with `submit=false` on
-11 October 2026 ([run 38141708382](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/38141708382)).
-The hosted runner fetched 12,598 Massive bars, read Snowflake's previous close
-and prepared four fictional trades and four settlements. It did not submit new
-RAW data or run the dbt task graph. The first full hosted submission must use
-a new market day after its close is available.
-
-On 13 October 2026, the hosted October 12 delivery completed with 4 fictional
-trades, 0 settlements and 12,602 Massive closing prices. RAW readiness returned
-`READY:2026-10-12`. The dbt build task succeeded and produced NAV of
-$5,000,070.45 and $5,000,124.96 for accounts 01 and 02. The record task failed:
-Snowflake rejected `UUID_STRING()` inside its `INSERT ... VALUES` statement.
-`snowflake/12_repair_close_record.sql` replaced only that procedure, using
-`INSERT ... SELECT`. After checking both NAV rows and the successful dbt task,
-we called the repaired procedure to record `VALIDATED`. A repeat call returned
-`ALREADY_VALIDATED` without adding another run. This was a manual recovery, not
-an unattended end-to-end success; both automatic schedules were left disabled.
-
-The October 13 hosted delivery submitted 4 fictional trades, 8 settlement
-confirmations and 12,584 Massive closing prices. The first manual task graph
-run built the NAV but could not record it: replacing the record procedure had
-removed the task owner's `USAGE` grant. After restoring that grant, the second
-graph run succeeded through readiness, dbt build and recording. Snowflake now
-shows a `VALIDATED` October 13 close with NAV of $5,000,097.95 and
-$5,000,170.00 for accounts 01 and 02. The schedules were held disabled while
-the dividend gate was added.
-
-From October 14 onward the fictional trading plan covers 20 US equities rather
-than the four-name pilot. Each account makes four orders per market day from
-its ten-name list, with two buys and two sells in each four-order group. The
-rotation reaches all 20 names within three market sessions. It uses the
-previous validated Massive close for each selected ticker, and stops before
-writing a delivery if one is missing. Earlier dates still generate their
-original four trades. New executions carry `simulator_plan_id=equity_20_20261014`
-so the saved event identifies the plan used. This is a simulation for testing a
-broader position and settlement pipeline, not an investment strategy. The
-October 13 Massive delivery had a close for all 20 names; the October 14
-delivery has not been run yet.
-
-Dividend announcements are now a required input to the daily close. The
-October 13 NAV predates dividend booking, and no eligible event had reached
-its ex-date then. The current model includes expected entitlements when they
-arise, but does not reconcile actual dividend payments.
-
-Dividend ingestion started with a separate October 13 provider snapshot. Run
-`python -m pipeline.massive_dividends 2026-10-13` to fetch the announcement
-window (30 days back, 45 days ahead). The saved folder contains the original
-API pages, a manifest with hashes, and one JSON line per provider event. Its
-delivery ID comes from the event content, so a retry with the same events does
-not create another RAW delivery; a changed event creates a new snapshot for
-review. `python -m pipeline.dividends <snapshot-folder> --submit` stages the
-evidence and loads the events into `RAW.DAILY_DIVIDEND_EVENTS`. The October 13
-snapshot loaded 7,520 events from two API pages; retrying it was a no-op.
-None of the four traded tickers has an October 13 ex-dividend event in this
-snapshot. The wider window also contains a September 15 KO event and a
-November 19 MSFT event. This RAW load does not select an accounting version,
-decide account eligibility, change NAV, or prove that cash was paid. The
-scheduled producer had not been connected to this source at that point.
-
-The hosted producer is defined in `.github/workflows/daily-producer.yml`. A
-manual run with `submit=false` checks the runner, Massive login, Snowflake login
-and file preparation without loading records. Set `submit=true` only for a
-reviewed new market day. Scheduled attempts run at 00:17 and 01:17 New York
-time Tuesday through Saturday. The job is gated by the repository variable
-`NORTHBRIDGE_DAILY_ENABLED`, enabled on 14 October 2026. The runner chooses yesterday
-in New York and skips it if the reviewed NYSE calendar says the market was
-closed. A manual request for a closed date still fails, so a mistyped date is
-visible. The GitHub
-secrets `MASSIVE_API_KEY` and `NORTHBRIDGE_LOADER_KEY_B64` and repository variable
-`SNOWFLAKE_ACCOUNT` were configured on 11 October 2026. The latter key is the
-base64 form of the loader service user's private key. Do not put that key in
-the repository. A separate workflow service key is preferable when this is
-operated beyond the portfolio pilot.
-
-The Snowflake root task checks at 02:00, 03:00, 04:00 and 05:00 New York
-time Tuesday through Saturday. It was resumed on 14 October 2026. If Snowpipe is still
-loading at the first check, a later check can start the close. Its schedule
-does not select Saturday or Sunday as a business date. On a market holiday,
-missing inputs leave the dbt child task idle. When inputs are ready, the task
-passes that date to dbt. The staging
-views read the relevant raw deliveries, and the incremental cash, position and
-NAV tables merge rows for that date. They do not create weekend NAV rows. The
-readiness procedure also returns `ALREADY_VALIDATED` for a date with a checked
-close, so a retry does not rebuild dbt or record another validated attempt.
-
-The `daily-close-deadline.yml` workflow checks for exactly one validated close
-at 05:30 New York time. It skips weekends and reviewed market holidays. A
-missing close makes that GitHub run fail; delivery to a person's email or web
-notifications depends on their GitHub notification settings. The workflow and
-the producer schedule are gated by `NORTHBRIDGE_DAILY_ENABLED`, which was set
-to `true` on 14 October 2026.
-GitHub's scheduled workflows can start late. The market producer attempts the
-same date at 00:17 and 01:17 New York time; the second attempt can recover a
-late provider response without changing a saved delivery. A changed price
-delivery or a failure after both attempts still needs an operator. The trial resource monitor remains a
-hard cost stop, not a pipeline error to bypass.
-
-## An OMS conflict drill
-
-`python -m pipeline.incident_drill` saves a separate fictional OMS delivery in
-`data/drills/`. One report says the fund bought 10 AAPL shares; a later report
-for the same execution ID and version says 12. A real resend can repeat the
-same details, but changing the trade requires a new version and investigation.
-The drill never submits to Snowflake. Its local delivery check rejects the
-conflict before Snowpipe. The dbt `conflicting_oms_reports` test checks the same
-rule in RAW in case another ingestion route bypasses that local check.
-
-The daily close already has other realistic boundaries: it waits for a missing
-held-stock price, carries Friday settlements across the weekend, and records an
-empty settlement delivery on the October 12 settlement holiday. These are
-fictional fund events alongside real market prices, not claims about an actual
-broker or custodian. A properly versioned trade correction still needs a
-separate end-to-end settlement and cash replay; this drill only proves the
-conflicting same-version case is stopped.
-
-On 11 October 2026, `SHOW RESOURCE MONITORS` showed the dev monitor at
-5.05/5.00 monthly credits. `SHOW WAREHOUSES` confirmed that `COMPUTE_WH` is
-attached to that monitor and is suspended. The separate CI and prod monitors
-still had credits, but this dev pipeline does not silently move to either
-warehouse. The limit was reviewed before changing it; no other warehouse was
-assigned.
-
-After approval, the dev monitor quota was raised to 10 credits. Snowflake
-reported 5.05 used and 4.95 remaining in the current interval. This makes
-another warehouse run possible; it does not activate the scheduled tasks.
-
-To configure the hosted producer on another account, authenticate GitHub CLI
-with `gh auth login -h github.com`. Save the Massive key privately with
-`python -m scripts.save_massive_key`, then run
-`python -m scripts.configure_daily_github` to send the saved key and loader
-private key to GitHub Actions as repository secrets. That script sends secrets
-through standard input so they do not appear as command arguments. Do not put
-either key in a committed file. Test `workflow_dispatch` for a single date
-before enabling the Snowflake root task.
-
-To redeploy dbt source after a reviewed change, run
-`python -m scripts.deploy_dbt_project` with the dbt service key environment
-settings. It updates the project object without replacing its run history.
-`snowflake/09_task_access.sql` holds the role grants and
-`snowflake/09_daily_task.sql` holds the task graph definition. The Snowflake CLI
-3.27 uploader failed with `Cannot join path to a file` on Windows, so the
-deployment script uploads just the project source files to an internal stage
-and uses `CREATE DBT PROJECT` or `ALTER DBT PROJECT ... DEPLOY`.
-
-## Dividend review and expected cash
-
-`RAW.DAILY_DIVIDEND_EVENTS` keeps the Massive snapshots as received. The dbt
-`stg_dividends` view keeps the latest delivered version of each provider event
-ID. Its `terms_hash` changes if the ticker, dates, cash amount, currency or
-distribution type changes. `RAW.DIVIDEND_REVIEWS` holds dated human decisions
-for a specific event ID and hash; it starts empty. A changed event therefore
-returns to `PENDING` rather than inheriting approval for older terms.
-
-Review only events relevant to the traded securities and dates. Check the
-issuer and share-class identity, the provider event details, and whether a
-second payment on the same ex-date is genuinely separate. An `APPROVED` review
-must name the fund's `instrument_id`, reviewer and reason. Do not infer the
-security from a ticker alone. Keep rejected decisions as evidence.
-
-`RAW.SECURITY_MAPPINGS` now registers the 20 fund securities with effective
-dates. They begin as `PENDING`, not approved identities. An approved mapping
-needs current CIK and share-class FIGI evidence, a reviewer and an evidence
-reference. `dividend_review_queue` shows only provider events that match this
-dated fund universe. Ordinary recurring USD cash events become `READY` after
-the security mapping is approved. Provider term changes, unusual distributions,
-invalid terms and ambiguous mappings stay in the exception queue. A per-event
-review can approve or reject those cases without altering RAW history.
-
-`fct_dividend_exposure` books each `READY` USD cash event once per account on
-its ex-date, using signed shares at the previous validated market close. It
-keeps the event ID, provider terms hash and eligible share count so the amount
-can be traced back to the real announcement and the position used. Long shares
-create a receivable and positive dividend P&L; short shares create a liability
-and negative dividend P&L. `fct_dividend_daily` carries the open amount until
-the announced pay date. From the first market close on or after that date,
-`fct_cash_daily` includes it in **modeled** cash and clears the open amount;
-`fct_nav_daily` includes cash and the still-open receivable or liability.
-
-This is the simulation's expected accounting, not evidence of a broker cash
-payment. A real fund would reconcile the payment against an independent broker
-or bank statement and deal with tax, payment changes and payments in lieu on
-short positions. If Massive changes a booked event's terms, the dbt check
-stops the close for a reviewed restatement instead of silently overwriting the
-booked amount. A held stock with an unreviewed ex-date event also stops the
-close. Neither an announcement nor a future pay date is a confirmed receipt.
-
-On 14 October 2026 the first snapshot produced 7,520 current events, all
-`PENDING`, and zero account exposures. That is the safe starting state: the
-provider feed has arrived, but no security identity has been approved.
-
-The dividend feed now has its own GitHub schedule at 00:25 and 01:25 New York
-time after each US market day. `pipeline.produce_dividends` fetches a rolling
-provider snapshot and submits it as a dated delivery. An identical retry keeps
-the same delivery ID; changed provider content makes a new delivery. The
-05:35 dividend deadline workflow checks the latest delivery's status and RAW
-row count separately from the validated NAV close. The dividend schedule uses
-its own `NORTHBRIDGE_DIVIDENDS_ENABLED` gate; the market producer and NAV task
-remain under their existing controls.
-The close readiness procedure also checks the latest dividend delivery for
-the same market date. It returns `WAITING_DIVIDENDS` if that delivery is
-missing, incomplete, or replaced by a newer unfinished one. This holds the
-dbt close until the new snapshot is present. A dbt test confirms its staging
-view consumed the dated snapshot before accounting uses it.
-
-The daily fetch covers a 75-day ex-date window. A market-wide empty response
-fails the delivery; zero events for the fund within an otherwise complete
-snapshot is normal. If a previously seen event disappears while its ex-date
-is still inside the newest request window, the review queue marks it
-`MISSING_FROM_SNAPSHOT` instead of treating the old announcement as ready.
-
-On 14 October, a hosted manual run loaded a newer 7,537-row snapshot for the
-October 13 market day. The deadline check matched all 7,537 RAW rows. The
-latest dbt views showed three fund-relevant events: PG, MSFT and JNJ. On 14
-October we checked their dated Massive ticker details with
-`python -m pipeline.security_reference 2026-10-14 PG MSFT JNJ`; MSFT was also
-checked against the simulator's 8 October start date. Response JSON and a
-compact CSV are saved under `data/security_reference/`, and the provider
-request IDs are recorded in `RAW.SECURITY_MAPPINGS`. The reviewed SQL is
-`snowflake/17_review_dividend_securities.sql`. It approved only these three
-simulated instrument mappings; the other 17 remain `PENDING`. This mapping
-uses the simulator's ticker-based IDs, not an independent broker security
-master. The three events are now `READY`, but their ex-dates are in the future.
-There were no booked account exposures at the October 13 close. The dividend
-accounting models were built and deployed on 15 October. That build kept the
-two October 13 NAV values unchanged and passed all 34 dbt data checks. The
-first real ex-date and pay-date effects remain to be observed on future daily
-closes. The separate dividend schedule was enabled on 14 October.
+To deploy a reviewed dbt change, use `python -m scripts.deploy_dbt_project`
+with the dbt service key configured. To run a reviewed Snowflake SQL file from
+the project terminal, use `python scripts/snow_admin.py --file <path>` with the
+admin connection configured. These are deployment commands, not daily jobs.
+
+## Current boundary
+
+This is a working daily calculation path, not a fully independent fund
+accounting platform. It still needs independent broker and bank evidence,
+payment reconciliation, a reviewed NAV publication decision, and reliable
+producer scheduling beyond GitHub Actions. The 2026 market calendar must be
+reviewed before running dates in 2027.
