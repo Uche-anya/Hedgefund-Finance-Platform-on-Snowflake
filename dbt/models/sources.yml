@@ -2,13 +2,14 @@ version: 2
 
 sources:
   - name: raw
-    database: NORTHBRIDGE_DEV
+    database: "{{ target.database }}"
     schema: RAW
     tables:
       - name: daily_oms_events
       - name: daily_price_events
       - name: daily_settlement_events
       - name: daily_opening_events
+      - name: daily_bank_statements
       - name: daily_deliveries
       - name: daily_dividend_events
       - name: dividend_reviews

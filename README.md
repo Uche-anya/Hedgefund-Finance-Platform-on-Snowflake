@@ -10,14 +10,15 @@ bank evidence. The output is a **validated calculation**, not a published NAV.
 
 | Step | What runs | Result |
 | --- | --- | --- |
-| Produce | [GitHub Actions](.github/workflows) runs `pipeline.produce_day` and `pipeline.produce_dividends` after a US market day | Dated, hashed deliveries from Massive and the simulator |
+| Produce | [GitHub Actions](.github/workflows) runs the market, dividend and simulated bank producers after a US market day | Dated, hashed deliveries from Massive and the simulator |
 | Ingest | The loader registers delivery IDs and stages files in Snowflake. Snowpipe loads OMS and settlement events; checked `COPY` commands load prices and dividends | Immutable deliveries and row counts in `NORTHBRIDGE_DEV.RAW` |
-| Gate | `DAILY_CLOSE_READY` compares expected and loaded rows, checks the dividend snapshot and requires a valid close for every held stock | A ready date, or a reason to wait |
+| Gate | `DAILY_CLOSE_READY` checks delivery counts, dividend and bank inputs, and prices for held stocks | A ready date, or a reason to wait |
 | Build | `DAILY_CLOSE_BUILD` runs the deployed Snowflake dbt project | Typed staging views and incremental position, cash, dividend and NAV tables |
-| Record | `DAILY_CLOSE_RECORD` checks both account NAVs and records one `VALIDATED` close | An auditable calculation in `RAW.DAILY_CLOSE_RUNS` |
+| Record | `DAILY_CLOSE_RECORD` checks both account NAVs and bank cash matches before recording one `VALIDATED` close | An auditable calculation in `RAW.DAILY_CLOSE_RUNS` |
 
 The market producer is scheduled hourly from 00:17 to 04:17 New York time,
-Tuesday through Saturday; dividends run from 00:25 to 04:25. The Snowflake
+Tuesday through Saturday; dividends run from 00:25 to 04:25, and the bank
+producer retries from 01:17 to 04:17. The Snowflake
 readiness task checks hourly from 02:00 to 07:00. A separate GitHub check
 fails if the prior market day's close is not validated by 05:30; the dividend
 delivery has a 05:35 check. The
@@ -45,7 +46,12 @@ The [dbt project](dbt) keeps source typing in `stg_*` views and daily results
 in `fct_*` incremental tables. `fct_position_daily` carries signed shares and
 market values; `fct_cash_daily` tracks calculated and unsettled cash;
 `fct_nav_daily` combines cash, positions and open dividend amounts. Dividend
-models use dated security mappings and the prior eligible position to book
+cash is compared with a separately loaded simulated bank statement in
+[`fct_cash_reconciliation`](dbt/models/marts/fct_cash_reconciliation.sql).
+The bank simulator posts due trades from OMS data, so a missing settlement can
+appear as a cash break. It is still fictional bank evidence. The simulator
+stops at a booked dividend pay date until bank payment evidence is added.
+Dividend models use dated security mappings and the prior eligible position to book
 long receivables or short liabilities on the ex-date. Cash movement on the pay
 date is **modeled**. There is no independent payment confirmation, tax or
 stock-borrow accounting.
@@ -78,7 +84,8 @@ normal schedule.
 ## Run and verify
 
 The scheduled workflow is the normal producer. For a reviewed market date,
-use `workflow_dispatch` on `daily-producer.yml` and `daily-dividends.yml` to
+use `workflow_dispatch` on `daily-producer.yml`, `daily-dividends.yml` and
+`daily-bank.yml` to
 retry a delivery. A manual dispatch defaults to preparation only; choose
 `submit=true` to load it. The readiness task can then build the close. Inspect
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
@@ -86,7 +93,7 @@ the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
 Pull requests and pushes to `main` run Python tests and an **offline** dbt parse
 in [CI](.github/workflows/ci.yml). These checks do not build in Snowflake or
-deploy code. The [CI/CD plan](docs/ci-cd.md) records the production boundary
+deploy code. The [CI/CD plan](docs/ci-cd.md) records the DEV, TEST and PROD boundaries
 and the work still needed. To run the Python checks locally:
 
 ```powershell

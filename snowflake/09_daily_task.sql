@@ -1,6 +1,4 @@
--- Deploy the dbt project into NORTHBRIDGE_DEV.DBT_DEV before running this file.
--- The task owner needs CREATE TASK/PROCEDURE on DBT_DEV and EXECUTE TASK on account.
--- To change this task graph later, suspend the root first; resume it after checks.
+-- Suspend DAILY_CLOSE_READY before changing this task graph; resume it last.
 USE ROLE NORTHBRIDGE_DBT_DEV;
 
 CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DIVIDEND_INPUT(
@@ -39,6 +37,49 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_BANK_INPUT(
+    CLOSE_DATE DATE, SCENARIO VARCHAR)
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+    delivery_count NUMBER;
+    ready_count NUMBER;
+    bank_rows NUMBER;
+    account_count NUMBER;
+    bad_rows NUMBER;
+BEGIN
+    SELECT COUNT(*), COUNT_IF(status = 'LOADED' AND expected_rows = 2)
+      INTO :delivery_count, :ready_count
+    FROM NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES
+    WHERE source_name = 'bank' AND business_date = :CLOSE_DATE
+      AND scenario_id = :SCENARIO;
+    IF (delivery_count != 1 OR COALESCE(ready_count, 0) != 1) THEN
+        RETURN 'WAITING_BANK';
+    END IF;
+
+    SELECT COUNT(*), COUNT(DISTINCT r.payload:account_id::varchar),
+        COUNT_IF(COALESCE(r.payload:scenario_id::varchar, '') != :SCENARIO
+            OR TRY_TO_DATE(r.payload:statement_date::varchar) IS NULL
+            OR TRY_TO_DATE(r.payload:statement_date::varchar) != :CLOSE_DATE
+            OR COALESCE(r.payload:currency::varchar, '') != 'USD'
+            OR COALESCE(r.payload:source_system::varchar, '') != 'simulated_bank'
+            OR TRY_TO_DECIMAL(r.payload:closing_balance::varchar, 38, 2) IS NULL)
+      INTO :bank_rows, :account_count, :bad_rows
+    FROM NORTHBRIDGE_DEV.RAW.DAILY_BANK_STATEMENTS r
+    JOIN NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES d
+        ON d.source_name = 'bank' AND d.business_date = :CLOSE_DATE
+        AND d.scenario_id = :SCENARIO AND d.status = 'LOADED'
+        AND ENDSWITH(r.source_file, d.stage_path);
+    IF (bank_rows != 2 OR account_count != 2 OR COALESCE(bad_rows, 0) != 0) THEN
+        RETURN 'WAITING_BANK';
+    END IF;
+    RETURN 'READY';
+END;
+$$;
+
 CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DAILY_INPUTS(
     CLOSE_DATE DATE, SCENARIO VARCHAR, OPENING_DATE DATE)
 RETURNS VARCHAR
@@ -53,6 +94,7 @@ DECLARE
     completed_count NUMBER;
     state VARCHAR;
     dividend_state VARCHAR;
+    bank_state VARCHAR;
 BEGIN
     SELECT COUNT(*) INTO :completed_count
     FROM NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS
@@ -106,6 +148,12 @@ BEGIN
         INTO :dividend_state;
     IF (dividend_state != 'READY') THEN
         RETURN dividend_state;
+    END IF;
+
+    CALL NORTHBRIDGE_DEV.DBT_DEV.CHECK_BANK_INPUT(:CLOSE_DATE, :SCENARIO)
+        INTO :bank_state;
+    IF (bank_state != 'READY') THEN
+        RETURN bank_state;
     END IF;
 
     SELECT COUNT(*) INTO :missing_prices
@@ -175,7 +223,10 @@ DECLARE
     account_count NUMBER;
     priced_count NUMBER;
     previous_count NUMBER;
+    cash_count NUMBER;
+    cash_matches NUMBER;
     bad_nav EXCEPTION(-20001, 'Expected one NAV per account');
+    bad_cash EXCEPTION(-20002, 'Bank cash does not reconcile');
 BEGIN
     SELECT COUNT(*), COUNT(DISTINCT account_id), COUNT(nav_usd)
         INTO :nav_count, :account_count, :priced_count
@@ -190,6 +241,13 @@ BEGIN
       AND status = 'VALIDATED';
     IF (previous_count > 0) THEN
         RETURN 'ALREADY_VALIDATED';
+    END IF;
+    SELECT COUNT(*), COUNT_IF(reconciliation_status = 'MATCH')
+        INTO :cash_count, :cash_matches
+    FROM NORTHBRIDGE_DEV.DBT_DEV.FCT_CASH_RECONCILIATION
+    WHERE statement_date = :CLOSE_DATE AND scenario_id = :SCENARIO;
+    IF (cash_count != 2 OR COALESCE(cash_matches, 0) != 2) THEN
+        RAISE bad_cash;
     END IF;
     INSERT INTO NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS
         (run_id, business_date, scenario_id, opening_date, status, detail, finished_at)
@@ -216,6 +274,7 @@ CREATE OR ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD
     AFTER NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY
     WHEN SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_INPUTS'
      AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_DIVIDENDS'
+     AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_BANK'
      AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'WAITING_PRICES'
      AND SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY') != 'ALREADY_VALIDATED'
 AS

@@ -8,3 +8,17 @@ northbridge:
       warehouse: COMPUTE_WH
       role: NORTHBRIDGE_DBT_DEV
       threads: 1
+    test:
+      type: snowflake
+      database: NORTHBRIDGE_TEST
+      schema: DBT_TEST
+      warehouse: COMPUTE_WH
+      role: NORTHBRIDGE_DBT_TEST
+      threads: 1
+    prod:
+      type: snowflake
+      database: NORTHBRIDGE_PROD
+      schema: DBT_PROD
+      warehouse: COMPUTE_WH
+      role: NORTHBRIDGE_DBT_PROD
+      threads: 1

@@ -12,3 +12,14 @@ northbridge:
       threads: 1
       private_key_path: "{{ env_var('NORTHBRIDGE_DBT_KEY_PATH') }}"
       query_tag: northbridge_positions_dev
+    test:
+      type: snowflake
+      account: gxmgyta-fq45953
+      user: NORTHBRIDGE_DBT
+      role: NORTHBRIDGE_DBT_TEST
+      warehouse: COMPUTE_WH
+      database: NORTHBRIDGE_TEST
+      schema: DBT_TEST
+      threads: 1
+      private_key_path: "{{ env_var('NORTHBRIDGE_DBT_KEY_PATH') }}"
+      query_tag: northbridge_cash_test

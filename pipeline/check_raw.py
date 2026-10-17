@@ -14,6 +14,7 @@ RAW_TABLE = {
     "prices": PRICE_TABLE,
     "opening_bank": "NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS",
     "opening_admin": "NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS",
+    "bank": "NORTHBRIDGE_DEV.RAW.DAILY_BANK_STATEMENTS",
 }
 
 
@@ -100,7 +101,7 @@ def check_held_prices(cursor, business_date, scenario):
 
 def readiness(cursor, business_date, scenario, opening_date):
     results = [check_source(cursor, business_date, scenario, source)
-               for source in ("oms", "settlements")]
+               for source in ("oms", "settlements", "bank")]
     results += [check_source(cursor, opening_date, scenario, source)
                 for source in ("opening_bank", "opening_admin")]
     price_ready, price_message = check_source(cursor, business_date, MARKET, "prices")

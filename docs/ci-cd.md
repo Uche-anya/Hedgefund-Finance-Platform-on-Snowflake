@@ -6,13 +6,28 @@ pull-request check is not proof that a daily close ran.
 
 ## What exists today
 
-The live pipeline runs in `NORTHBRIDGE_DEV`. Pull requests run Python tests and
-an offline dbt parse. The parse catches project/Jinja configuration errors; it
-does not execute SQL, read RAW data, or verify Snowflake permissions. The daily
-Snowflake task graph is deployed separately. The GitHub `production`
-environment exists, but there is no production Snowflake database, deployment
-identity, or production task graph. `main` is not yet protected by required
-checks or review. We should not call the current workflow production CD.
+The running daily pipeline is in `NORTHBRIDGE_DEV`. Pull requests run Python
+tests and an offline dbt parse for all three targets. The parse catches
+project/Jinja configuration errors; it does not execute SQL, read RAW data, or
+verify Snowflake permissions. The daily Snowflake task graph is deployed
+separately. `main` is not yet protected by required checks or review.
+
+| Environment | Purpose | State |
+| --- | --- | --- |
+| DEV: `NORTHBRIDGE_DEV` | Develop the current daily pipeline | RAW data, dbt models and scheduled tasks are running |
+| TEST: `NORTHBRIDGE_TEST` | Build candidate dbt code against isolated daily inputs | October 16 clone and local dbt build passed; hosted CI identity is not configured |
+| PROD: `NORTHBRIDGE_PROD` | Run approved code and daily deliveries | Database, schemas and roles exist, but no tables, dbt project or tasks exist |
+
+The TEST setup is [21_test_environment.sql](../snowflake/21_test_environment.sql).
+It clones the current daily RAW tables. The October 16 `dbt build --target test`
+passed with 12 models and 34 data tests. TEST has no scheduled tasks and does
+not receive daily producer deliveries.
+
+The older `NORTHBRIDGE_CI_BASE` contains retired replay data and is not the
+TEST environment for the current daily pipeline. The GitHub `production`
+environment also exists, but has no deployment credential configured in GitHub
+or approval rule.
+These names alone do not make a production release path.
 
 ## Release path
 
@@ -25,11 +40,10 @@ checks or review. We should not call the current workflow production CD.
 | Next market day | Scheduled producer, Snowpipe/COPY, readiness/build/record tasks, deadline check | One validated close per account and complete delivery evidence |
 
 Integration and production deployment are **not implemented yet**. They need
-separate Snowflake objects and credentials, not another job that points to
-`NORTHBRIDGE_DEV`. The production environment should have its own RAW and dbt
-schemas, service roles, warehouse/resource monitor and task graph. The dbt
-profile, source database, deployment script and task SQL currently name DEV;
-each must be made environment-specific before promotion is enabled.
+separate credentials and operational objects, not another job that points to
+`NORTHBRIDGE_DEV`. The dbt targets and RAW source declarations now select the
+matching database. The deployment script, task SQL and producer still name
+DEV; each must be made environment-specific before promotion is enabled.
 
 The CI identity should write only to its test schema. The deploy identity
 should own the dbt project object; it should not be the data-loader identity.
@@ -48,11 +62,11 @@ explicit compatibility and rollback review before promotion.
 
 ## Next implementation slice
 
-1. Provision an isolated Snowflake CI schema and test identity. Run `dbt build`
-   there on a controlled fixture in PRs from trusted branches. Forked PRs
+1. Give trusted CI runs a limited test identity and run `dbt build`
+   on the cloned daily fixture in PRs from trusted branches. Forked PRs
    should remain credential-free.
-2. Parameterize dbt sources, project profiles, deployment script and task SQL
-   for DEV and PROD. Provision PROD separately; do not clone live schedules.
+2. Parameterize the deployment script, task SQL and producer for PROD. Create
+   PROD RAW tables and grants separately; do not clone live schedules.
 3. Add DEV deployment on `main` and a manual, approved PROD promotion for the
    same commit. Turn on required checks and branch protection only after the
    integration job is stable.

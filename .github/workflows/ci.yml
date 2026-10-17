@@ -24,5 +24,19 @@ jobs:
         run: python -m pip install -r requirements.txt -r requirements-dbt.txt
       - name: Python tests
         run: python -m unittest discover -s tests -p 'test_*.py'
-      - name: Parse dbt project without a Snowflake connection
-        run: dbt parse --project-dir dbt --profiles-dir .github/dbt_ci --no-partial-parse
+      - name: Parse each dbt target without a Snowflake connection
+        run: |
+          for target in dev test prod; do
+            dbt parse --project-dir dbt --profiles-dir .github/dbt_ci --target "$target" --no-partial-parse
+            TARGET="$target" python - <<'PY'
+          import json
+          import os
+
+          with open('dbt/target/manifest.json') as file:
+              manifest = json.load(file)
+          expected = 'NORTHBRIDGE_' + os.environ['TARGET'].upper()
+          databases = {source['database'] for source in manifest['sources'].values()}
+          if databases != {expected}:
+              raise SystemExit('RAW sources for {} point at {}'.format(expected, databases))
+          PY
+          done
