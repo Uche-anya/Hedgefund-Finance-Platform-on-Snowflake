@@ -1,4 +1,4 @@
-name: Daily simulated bank statement
+name: Daily simulated bank ledger
 
 on:
   schedule:
@@ -69,7 +69,7 @@ jobs:
           path.write_bytes(base64.b64decode(value, validate=True))
           path.chmod(0o600)
           PY
-      - name: Prepare or deliver bank balances
+      - name: Prepare or deliver bank ledger
         if: steps.day.outputs.run == 'true'
         env:
           REQUESTED_DATE: ${{ steps.day.outputs.business_date }}

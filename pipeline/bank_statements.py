@@ -14,14 +14,25 @@ from pipeline.load_day import REGISTRY, STAGE, snowflake_connection, stage_has_f
 TABLE = "NORTHBRIDGE_DEV.RAW.DAILY_BANK_STATEMENTS"
 
 
-def prepare(csv_file, data_dir, business_date, scenario):
+def prepare(csv_file, data_dir, business_date, scenario, previous_date=None):
     day = date.fromisoformat(business_date).isoformat()
+    if previous_date:
+        previous_date = date.fromisoformat(previous_date).isoformat()
+        if previous_date >= day:
+            raise ValueError("Previous statement date must precede this statement")
     rows = []
     seen = set()
     with csv_file.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
-        if reader.fieldnames != ["account_id", "currency", "closing_balance"]:
-            raise ValueError("Expected account_id,currency,closing_balance")
+        legacy = ["account_id", "currency", "closing_balance"]
+        ledger = ["account_id", "currency", "opening_balance",
+                  "closing_balance", "postings_json"]
+        if reader.fieldnames not in (legacy, ledger):
+            raise ValueError("Unexpected bank statement columns")
+        if previous_date and reader.fieldnames != ledger:
+            raise ValueError("Daily bank delivery needs opening balance and postings")
+        if reader.fieldnames == ledger and not previous_date:
+            raise ValueError("Ledger needs a previous statement date")
         for row in reader:
             account = row["account_id"].strip()
             if not account or account in seen or row["currency"] != "USD":
@@ -32,8 +43,44 @@ def prepare(csv_file, data_dir, business_date, scenario):
                 raise ValueError("Invalid balance for {}".format(account))
             if not amount.is_finite() or amount.as_tuple().exponent < -2:
                 raise ValueError("Balance must have no more than two decimal places")
+            opening = None
+            postings = None
+            if reader.fieldnames == ledger:
+                try:
+                    opening = Decimal(row["opening_balance"])
+                    postings = json.loads(row["postings_json"])
+                except (InvalidOperation, TypeError, json.JSONDecodeError):
+                    raise ValueError("Invalid bank ledger for {}".format(account))
+                if (not opening.is_finite() or opening.as_tuple().exponent < -2
+                        or not isinstance(postings, list)):
+                    raise ValueError("Invalid opening balance or postings")
+                posting_ids = set()
+                total = Decimal("0")
+                for posting in postings:
+                    if not isinstance(posting, dict):
+                        raise ValueError("Invalid bank posting")
+                    posting_id = posting.get("posting_id")
+                    if not posting_id or posting_id in posting_ids:
+                        raise ValueError("Missing or repeated bank posting")
+                    if posting.get("type") not in (
+                            "TRADE_SETTLEMENT", "BANK_FEE", "BANK_FEE_REVERSAL"):
+                        raise ValueError("Unknown bank posting type")
+                    try:
+                        posting_date = date.fromisoformat(posting["posting_date"]).isoformat()
+                        posting_amount = Decimal(posting["amount"])
+                    except (KeyError, TypeError, InvalidOperation, ValueError):
+                        raise ValueError("Invalid bank posting date or amount")
+                    if not previous_date < posting_date <= day:
+                        raise ValueError("Bank posting falls outside statement period")
+                    if (not posting_amount.is_finite()
+                            or posting_amount.as_tuple().exponent < -2):
+                        raise ValueError("Invalid bank posting amount")
+                    posting_ids.add(posting_id)
+                    total += posting_amount
+                if opening + total != amount:
+                    raise ValueError("Bank ledger does not roll forward for {}".format(account))
             seen.add(account)
-            rows.append({
+            record = {
                 "statement_date": day,
                 "scenario_id": scenario,
                 "account_id": account,
@@ -42,7 +89,14 @@ def prepare(csv_file, data_dir, business_date, scenario):
                 "source_system": "simulated_bank",
                 "is_simulated": True,
                 "record_id": "BANK-{}-{}".format(day, account),
-            })
+            }
+            if previous_date:
+                record.update({
+                    "previous_statement_date": previous_date,
+                    "opening_balance": format(opening, ".2f"),
+                    "postings": postings,
+                })
+            rows.append(record)
     if not rows:
         raise ValueError("Bank statement is empty")
 
@@ -132,10 +186,12 @@ def main():
     parser.add_argument("business_date")
     parser.add_argument("--scenario", default="sim-close-20261008")
     parser.add_argument("--statement", type=Path, required=True)
+    parser.add_argument("--previous-date", help="Date of the opening bank balance")
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
     parser.add_argument("--submit", action="store_true")
     args = parser.parse_args()
-    item = prepare(args.statement, args.data_dir, args.business_date, args.scenario)
+    item = prepare(args.statement, args.data_dir, args.business_date, args.scenario,
+                   previous_date=args.previous_date)
     print("{} bank balances prepared: {}".format(item["rows"], item["path"]))
     if args.submit:
         with snowflake_connection() as connection:

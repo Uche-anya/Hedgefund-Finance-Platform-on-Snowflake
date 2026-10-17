@@ -1,37 +1,33 @@
-# Daily cash check
+# Daily bank cash check
 
-The daily simulated bank statement compares its closing balances with dbt's
-calculated cash. The statement is a separate delivery. It is not copied from
-`FCT_CASH_DAILY` or the settlement table.
+The bank feed is fictional. It travels through a separate delivery from the
+fund's cash calculation, but both still start with our simulated trades. A
+match does not count as confirmation from a real bank.
 
-The bank simulator starts with the $5 million October 7 opening bank record.
-It posts each trade on its scheduled settlement date, using the saved OMS
-execution. For October 16 it gives $4,994,888.65 and $4,978,139.30. Those
-match the separately calculated cash, which uses settlement confirmations.
-The simulator stops when a booked dividend reaches its pay date because we do
-not yet have a separate bank payment event. Both sides still depend on
-fictional trading activity. A match is not confirmation from a real bank.
+For each account, the new bank file contains an opening balance, individual
+dated postings, and a closing balance. The next market day starts with the
+previous bank statement's closing balance. The producer waits for the day's
+OMS delivery and for the previous close to be validated. It stops if a booked
+dividend reaches its pay date: we do not yet have bank payment evidence.
 
-To prepare a daily statement from the saved opening and trade events:
+The loader checks that opening balance plus postings equals closing balance,
+then saves an immutable JSONL delivery in `RAW.DAILY_BANK_STATEMENTS`.
+`FCT_CASH_RECONCILIATION` also checks the roll-forward in Snowflake and
+checks that today's bank opening equals the prior bank close. Finally it
+compares bank cash with `FCT_CASH_DAILY`. The close task records
+`VALIDATED` only when both accounts have `MATCH`.
 
-```powershell
-python -m pipeline.produce_bank 2026-10-16
-```
+The October 16 dry run reproduced the two existing balances:
+$4,994,888.65 and $4,978,139.30. The October 16 statement already loaded
+is a balance-only legacy delivery; its validated close is unchanged. The new
+ledger format applies to future deliveries.
 
-The scheduled workflow retries before the Snowflake close window and uses
-`--submit` to stage the saved JSONL file and load `RAW.DAILY_BANK_STATEMENTS`.
-The delivery registry records its row count and file hash. The dbt view
-`DBT_DEV.FCT_CASH_RECONCILIATION` compares bank and modeled cash by date,
-scenario and account. Its statuses are `MATCH`, `BREAK`, missing bank or model
-cash, duplicate bank row, and bad bank balance.
+Run `snowflake/25_bank_ledger_test.sql` in TEST to see a $50 bank fee produce
+`BREAK`. The script then adds a bank reversal, which returns the comparison
+to `MATCH`, and rolls the whole exercise back. This illustrates a **bank
+error** corrected by the bank. A genuine fee would remain a break until an
+approved fund expense was booked and NAV recalculated. The project does not
+yet contain that expense workflow or an operator review log.
 
-The Snowflake READY task waits for one complete bank delivery. After dbt runs,
-the RECORD task refuses to validate the close unless both accounts have
-`MATCH`. The 5:30 a.m. close deadline then reports any unresolved run. A cash
-break is a review item, not an automatic adjustment to NAV.
-
-The October 16 TEST build passed. A one-cent change produced `BREAK`, and
-removing an account produced `MISSING_BANK_STATEMENT`; both changes were rolled
-back. The bank readiness procedure returned `READY` for October 16 and
-`WAITING_BANK` for October 15. The example CSV is kept in `examples/` for
-reproducing the first delivery.
+Daily production would use bank-supplied transactions and statements in place
+of this simulator. The delivery and reconciliation contract can stay the same.
