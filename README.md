@@ -48,9 +48,10 @@ market values; `fct_cash_daily` tracks calculated and unsettled cash;
 `fct_nav_daily` combines cash, positions and open dividend amounts. Dividend
 cash is compared with a separately loaded simulated bank statement in
 [`fct_cash_reconciliation`](dbt/models/marts/fct_cash_reconciliation.sql).
-The bank simulator posts due trades from OMS data, so a missing settlement can
-appear as a cash break. It is still fictional bank evidence. The simulator
-stops at a booked dividend pay date until bank payment evidence is added.
+The bank simulator rolls forward its previous balance using dated postings
+from OMS trades, so a missing settlement can appear as a cash break. It is
+still fictional bank evidence. The simulator stops at a booked dividend pay
+date until bank payment evidence is added.
 Dividend models use dated security mappings and the prior eligible position to book
 long receivables or short liabilities on the ex-date. Cash movement on the pay
 date is **modeled**. There is no independent payment confirmation, tax or
@@ -104,6 +105,23 @@ To deploy a reviewed dbt change, use `python -m scripts.deploy_dbt_project`
 with the dbt service key configured. To run a reviewed Snowflake SQL file from
 the project terminal, use `python scripts/snow_admin.py --file <path>` with the
 admin connection configured. These are deployment commands, not daily jobs.
+
+## Verified example
+
+The [October 16 acceptance queries](snowflake/26_acceptance_20261016.sql)
+show 12,630 market prices, 7,133 dividend records, eight trades, eight
+settlements and two bank balances delivered. Snowflake recorded one
+`VALIDATED` close. The account NAVs were $5,001,300.80 and $4,999,487.75;
+both bank cash comparisons were `MATCH`.
+
+That bank delivery used the earlier balance-only format. The new transaction
+ledger reproduced both balances in a dry run and passed a
+[hosted producer run](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/39062827080).
+The [TEST incident script](snowflake/25_bank_ledger_test.sql) showed a $50
+bank fee produce `BREAK`, followed by `MATCH` when the bank reversed its
+error. The TEST changes were rolled back. This proves the calculation and
+reconciliation checks; it does not prove an unattended close using the new
+ledger delivery.
 
 ## Current boundary
 
