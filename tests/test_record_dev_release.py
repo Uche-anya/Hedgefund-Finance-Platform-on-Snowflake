@@ -45,6 +45,23 @@ class ReleaseRecordTests(unittest.TestCase):
                       "DEPLOY FROM '@NORTHBRIDGE_DEV.DBT_DEV.DBT_SOURCE/project/'", sql)
         self.assertTrue(any("'RESTORE'" in text for text in sql))
 
+    @patch("scripts.release_dbt.snowflake_connection")
+    def test_restore_uses_the_recorded_commit_folder(self, connect):
+        cursor = MagicMock()
+        source = "@NORTHBRIDGE_DEV.DBT_DEV.DBT_SOURCE/commits/{}/".format(SHA)
+        cursor.fetchall.return_value = [("COMMIT_SHA",), ("STAGE_PATH",)]
+        cursor.fetchone.side_effect = [
+            ("NORTHBRIDGE_DBT_DEV",), (SHA, 123, source), (True, None)
+        ]
+        connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = cursor
+
+        with patch.dict(os.environ, {"SNOWFLAKE_ROLE": "NORTHBRIDGE_DBT_DEV"}):
+            restore_last_release("dev")
+
+        sql = [call.args[0] for call in cursor.execute.call_args_list]
+        self.assertIn("ALTER DBT PROJECT NORTHBRIDGE_DEV.DBT_DEV.NORTHBRIDGE_DAILY "
+                      "DEPLOY FROM '{}'".format(source), sql)
+
 
 if __name__ == "__main__":
     unittest.main()

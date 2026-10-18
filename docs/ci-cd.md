@@ -77,10 +77,14 @@ release; the daily data jobs remain scheduled separately.
 
 If deployment or compile fails after the release key is ready, the workflow
 tries to redeploy and compile the last recorded good source. The workflow
-still fails so the operator can investigate. The restore command was tested
-against the current DEV commit; a deliberately broken hosted release has not
-been exercised. A failed restore needs operator attention before the next
-daily close.
+still fails so the operator can investigate. To rehearse this in DEV, run the
+workflow with `rehearse_failure` selected. It deploys the tested candidate,
+then deliberately fails verification before recording it. The restore step
+should redeploy the last recorded commit from its own stage folder. Expect a
+failed GitHub run, a successful restore step, and a `RESTORE` row in
+`CODE_RELEASES`. This tests the recovery path; it does not test how dbt
+handles an invalid model. A failed restore needs operator attention before
+the next daily close.
 
 PROD is deliberately gated. Its RAW tables, loader, grants, dbt project,
 producer routing, task graph and own service identity still need to be built
@@ -90,8 +94,7 @@ working production pipeline. Do not copy the live DEV schedules into PROD.
 ## Release work still open
 
 1. Protect `main` with required checks and review; it is not protected today.
-   Rehearse a failed hosted DEV release and restore before relying on the
-   automatic path in an operational incident.
+   Run the DEV release failure rehearsal before relying on automatic restore.
 2. Build independent PROD ingestion and tasks. Promote the *same* commit that
    passed TEST through a reviewed GitHub `production` environment.
 3. Rehearse a normal close, an input failure and rollback in PROD. For rollback,

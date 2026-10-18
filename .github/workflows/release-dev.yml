@@ -7,6 +7,11 @@ on:
         description: Successful main-branch CI run ID
         required: true
         type: string
+      rehearse_failure:
+        description: Fail after deployment to check that DEV restores the last good release
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -81,6 +86,11 @@ jobs:
         run: |
           python -m scripts.deploy_dbt_project --target dev \
             --release-sha '${{ steps.candidate.outputs.sha }}'
+      - name: Rehearse a failed verification
+        if: inputs.rehearse_failure
+        run: |
+          echo 'Deliberate DEV release failure after deployment' >&2
+          exit 1
       - name: Compile and record the release
         run: |
           python -m scripts.release_dbt record --target dev \
