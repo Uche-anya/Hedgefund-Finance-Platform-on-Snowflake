@@ -1,0 +1,91 @@
+name: Release dbt to DEV
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful main-branch CI run ID
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: dbt-dev-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+      SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_DEV
+      SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_DEV
+      SNOWFLAKE_PRIVATE_KEY_FILE: /tmp/northbridge_release_dev.p8
+      RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_DEV_KEY_B64 }}
+    steps:
+      - name: Check the tested commit
+        id: candidate
+        run: |
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'Invalid CI run ID' >&2; exit 1; }
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID")
+          echo "$run" | jq -e --arg repo "$GITHUB_REPOSITORY" '
+            .conclusion == "success" and .event == "push" and
+            .head_branch == "main" and .head_repository.full_name == $repo and
+            .path == ".github/workflows/ci.yml"
+          ' >/dev/null
+          integration=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/jobs" \
+            --jq '.jobs[] | select(.name == "integration") | .conclusion')
+          [ "$integration" = success ] || { echo 'TEST integration did not pass' >&2; exit 1; }
+          sha=$(echo "$run" | jq -r '.head_sha')
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')
+          if [ "$sha" != "$current" ]; then
+            echo 'A newer commit is on main. Test and release that commit instead.' >&2
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.candidate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Write DEV release key
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          value = os.environ.get('RELEASE_KEY_B64')
+          if not value:
+              raise SystemExit('DEV release key is missing')
+          path = Path(os.environ['SNOWFLAKE_PRIVATE_KEY_FILE'])
+          path.write_bytes(base64.b64decode(value, validate=True))
+          path.chmod(0o600)
+          PY
+      - name: Deploy native dbt project
+        run: python -m scripts.deploy_dbt_project --target dev
+      - name: Compile and record the release
+        run: |
+          python -m scripts.record_dev_release \
+            --sha '${{ steps.candidate.outputs.sha }}' \
+            --ci-run-id "$CI_RUN_ID"
+      - name: Release summary
+        env:
+          RELEASE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          echo "DEV dbt commit: $RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Passed CI run: $CI_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Snowflake record: NORTHBRIDGE_DEV.DBT_DEV.CODE_RELEASES' >> "$GITHUB_STEP_SUMMARY"

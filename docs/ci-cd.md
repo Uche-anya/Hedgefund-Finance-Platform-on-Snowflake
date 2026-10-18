@@ -38,7 +38,7 @@ daily producer deliveries.
 
 ## Deploying code
 
-The native dbt deployment command now requires an explicit environment:
+The native dbt deployment command requires an explicit environment:
 
 ```powershell
 python -m scripts.deploy_dbt_project --target dev
@@ -46,9 +46,31 @@ python -m scripts.deploy_dbt_project --target test
 ```
 
 It checks the Snowflake role and required RAW tables before uploading. The
-native runner also requires `--target`. These commands are currently run by
-an operator; the merge does not automatically deploy DEV. The daily tasks
-continue to use the previously deployed DEV project until that happens.
+native runner also requires `--target`.
+
+To release to DEV, open the successful **Pull request checks** run for the
+current `main` commit and copy its run ID. Start **Release dbt to DEV** from
+GitHub Actions with that ID. The release workflow checks that the run was a
+successful `main` push, that its TEST integration job passed, and that the
+commit is still the tip of `main`. It checks out that exact commit, deploys
+the native dbt project, and runs `dbt compile` inside Snowflake. Compile checks
+that the deployed project can resolve its models without rebuilding the daily
+NAV. After success it writes the commit SHA, CI run ID and deployment time to
+`NORTHBRIDGE_DEV.DBT_DEV.CODE_RELEASES`.
+
+The GitHub `development` environment is restricted to `main`. Its private
+key belongs to `NORTHBRIDGE_RELEASE_DEV`, a Snowflake service user with only
+the `NORTHBRIDGE_DBT_DEV` role. Generate a replacement locally with
+`python -m scripts.create_dev_release_key`, assign its public key to that
+user, and update the `NORTHBRIDGE_RELEASE_DEV_KEY_B64` environment secret.
+Do not release during the daily close window. This is a deliberate code
+release; the daily data jobs remain scheduled separately.
+
+If deployment or compile fails, the workflow fails and does not record the
+commit as released. The deployed object may already have changed, so the
+operator must restore the last known good commit before the next close. The
+release table and prior successful CI run identify that commit; rollback is
+not automated yet.
 
 PROD is deliberately gated. Its RAW tables, loader, grants, dbt project,
 producer routing, task graph and own service identity still need to be built
@@ -57,13 +79,11 @@ working production pipeline. Do not copy the live DEV schedules into PROD.
 
 ## Release work still open
 
-1. Make DEV deployment reproducible from a reviewed commit and record the
-   deployed commit SHA. Verify its native dbt build before the next close.
+1. Add automated rollback for a failed DEV compile and protect `main` with
+   required checks and review. It is not protected today.
 2. Build independent PROD ingestion and tasks. Promote the *same* commit that
    passed TEST through a reviewed GitHub `production` environment.
-3. Protect `main` with required checks and review. The environment names alone
-   do not enforce this, and `main` is not protected today.
-4. Rehearse a normal close, an input failure and rollback in PROD. For rollback,
+3. Rehearse a normal close, an input failure and rollback in PROD. For rollback,
    redeploy the prior reviewed commit; preserve RAW delivery history and assess
    any affected close before rerunning it.
 

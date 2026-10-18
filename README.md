@@ -102,9 +102,10 @@ run. To run the Python checks locally:
 .\.venv\dbt\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
 ```
 
-To deploy a reviewed dbt change, use
-`python -m scripts.deploy_dbt_project --target dev` with the DEV dbt role and
-key configured. To run a reviewed Snowflake SQL file from
+To release a reviewed dbt change to DEV, run
+[Release dbt to DEV](.github/workflows/release-dev.yml) with the successful
+CI run ID for the current `main` commit. It compiles the deployed project and
+records the commit in `DBT_DEV.CODE_RELEASES`. To run a reviewed Snowflake SQL file from
 the project terminal, use `python scripts/snow_admin.py --file <path>` with the
 admin connection configured. These are deployment commands, not daily jobs.
 
