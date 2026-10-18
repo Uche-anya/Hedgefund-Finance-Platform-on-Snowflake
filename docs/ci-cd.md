@@ -86,6 +86,11 @@ failed GitHub run, a successful restore step, and a `RESTORE` row in
 handles an invalid model. A failed restore needs operator attention before
 the next daily close.
 
+The [October 18 DEV rehearsal](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/39151438430)
+deployed candidate `71751bf`, stopped at the deliberate verification failure,
+and restored `f6d7faa` from its saved commit folder. The restore compiled
+successfully. The GitHub run is failed by design.
+
 PROD is deliberately gated. Its RAW tables, loader, grants, dbt project,
 producer routing, task graph and own service identity still need to be built
 and tested. Pointing a TEST job at a database named PROD would not produce a
@@ -94,7 +99,6 @@ working production pipeline. Do not copy the live DEV schedules into PROD.
 ## Release work still open
 
 1. Protect `main` with required checks and review; it is not protected today.
-   Run the DEV release failure rehearsal before relying on automatic restore.
 2. Build independent PROD ingestion and tasks. Promote the *same* commit that
    passed TEST through a reviewed GitHub `production` environment.
 3. Rehearse a normal close, an input failure and rollback in PROD. For rollback,
