@@ -51,7 +51,7 @@ jobs:
       contents: read
     env:
       NORTHBRIDGE_DBT_USER: NORTHBRIDGE_CI_TEST
-      NORTHBRIDGE_DBT_KEY_PATH: ${{ runner.temp }}/northbridge_ci_test.p8
+      NORTHBRIDGE_DBT_KEY_PATH: /tmp/northbridge_ci_test.p8
       TEST_KEY_B64: ${{ secrets.NORTHBRIDGE_CI_TEST_KEY_B64 }}
       DBT_BUSINESS_DATE: '2026-10-16'
       DBT_OPENING_DATE: '2026-10-07'
