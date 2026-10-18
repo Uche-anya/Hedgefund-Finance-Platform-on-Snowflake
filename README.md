@@ -10,29 +10,27 @@ bank evidence. The output is a **validated calculation**, not a published NAV.
 
 | Step | What runs | Result |
 | --- | --- | --- |
-| Produce | [GitHub Actions](.github/workflows) runs the market, dividend and simulated bank producers after a US market day | Dated, hashed deliveries from Massive and the simulator |
+| Produce | [GitHub Actions](.github/workflows) can run the market, dividend and simulated bank producers for a selected US market day | Dated, hashed deliveries from Massive and the simulator |
 | Ingest | The loader registers delivery IDs and stages files in Snowflake. Snowpipe loads OMS and settlement events; checked `COPY` commands load prices and dividends | Immutable deliveries and row counts in `NORTHBRIDGE_DEV.RAW` |
 | Gate | `DAILY_CLOSE_READY` checks delivery counts, dividend and bank inputs, and prices for held stocks | A ready date, or a reason to wait |
 | Build | `DAILY_CLOSE_BUILD` runs the deployed Snowflake dbt project | Typed staging views and incremental position, cash, dividend and NAV tables |
 | Record | `DAILY_CLOSE_RECORD` checks both account NAVs and bank cash matches before recording one `VALIDATED` close | An auditable calculation in `RAW.DAILY_CLOSE_RUNS` |
 
-The market producer is scheduled hourly from 00:17 to 04:17 New York time,
-Tuesday through Saturday; dividends run from 00:25 to 04:25, and the bank
-producer retries from 01:17 to 04:17. The Snowflake
-readiness task checks hourly from 02:00 to 07:00. A separate GitHub check
-fails if the prior market day's close is not validated by 05:30; the dividend
-delivery has a 05:35 check. The
-reviewed [2026 US equity calendar](config/us_equity_calendar_2026.json) skips
-market holidays and distinguishes them from settlement holidays.
+DEV automated schedules were stopped on October 18, 2026. Its GitHub
+workflows are manual, and the Snowflake readiness root and deadline task are
+suspended. PROD has not been provisioned for daily runs, so there is currently
+no unattended close. The reviewed
+[2026 US equity calendar](config/us_equity_calendar_2026.json) skips market
+holidays and distinguishes them from settlement holidays.
 
-GitHub's scheduler can be late. For the October 15, 2026 close, scheduled
+The earlier DEV pilot showed that GitHub's scheduler can be late. For the October 15, 2026 close, scheduled
 producer runs started after Snowflake's former 05:00 final check;
 [the incident record](incidents/2026-10-15-missed-producer.md)
 documents the manual recovery. The readiness window now extends to 07:00.
-`DAILY_CLOSE_DEADLINE` is a separate Snowflake task at 05:30. It fails in task
-history if the close is missing and skips reviewed market holidays. It was
-deployed on October 16; it does not send an external notification. A later
-successful close does not make a missed deadline timely.
+`DAILY_CLOSE_DEADLINE` was a separate Snowflake task at 05:30. It failed in
+task history if the close was missing and skipped reviewed market holidays.
+It did not send an external notification. A later successful close did not
+make a missed deadline timely.
 
 ## Data and models
 
@@ -71,7 +69,7 @@ event rather than silently changing the booked amount.
 - The readiness gate waits for Snowpipe row counts; a registered file is not
   assumed to have loaded. Empty settlement deliveries are explicit.
 - dbt merges by business key and date. A validated date is not rebuilt by a
-  later scheduled check.
+  later readiness check.
 - The GitHub loader uses a restricted Snowflake service role and private key;
   dbt uses a separate role. The loader can read validated closes but cannot
   write them. Secrets are kept outside Git. The development warehouse has a
@@ -80,15 +78,14 @@ event rather than silently changing the booked amount.
 The [Snowflake SQL](snowflake) contains the RAW, access and task definitions.
 `pipeline.recover_file` is an operator path for a failed Snowpipe file, after
 checking copy history and confirming no RAW rows loaded. It is not part of the
-normal schedule.
+  normal delivery path.
 
 ## Run and verify
 
-The scheduled workflow is the normal producer. For a reviewed market date,
-use `workflow_dispatch` on `daily-producer.yml`, `daily-dividends.yml` and
-`daily-bank.yml` to
-retry a delivery. A manual dispatch defaults to preparation only; choose
-`submit=true` to load it. The readiness task can then build the close. Inspect
+For a reviewed DEV market date, use `workflow_dispatch` on
+`daily-producer.yml`, `daily-dividends.yml` and `daily-bank.yml`. A manual
+dispatch defaults to preparation only; choose `submit=true` to load it.
+The suspended readiness graph must be explicitly run for a DEV close. Inspect
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
@@ -129,7 +126,7 @@ ledger delivery.
 
 ## Current boundary
 
-This is a working daily calculation path, not a fully independent fund
+This is a validated daily calculation path, not an operating PROD pipeline or a fully independent fund
 accounting platform. It still needs independent broker and bank evidence,
 payment reconciliation, a reviewed NAV publication decision, and reliable
 producer scheduling beyond GitHub Actions. The 2026 market calendar must be

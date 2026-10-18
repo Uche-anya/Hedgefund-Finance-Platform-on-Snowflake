@@ -1,9 +1,6 @@
-name: Check daily close deadline
+name: DEV close deadline check
 
 on:
-  schedule:
-    - cron: '30 5 * * TUE-SAT'
-      timezone: America/New_York
   workflow_dispatch:
     inputs:
       business_date:
@@ -16,7 +13,7 @@ permissions:
 
 jobs:
   check:
-    if: github.event_name != 'schedule' || vars.NORTHBRIDGE_DAILY_ENABLED == 'true'
+    environment: development
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:

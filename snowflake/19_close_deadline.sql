@@ -68,4 +68,4 @@ AS
     CALL NORTHBRIDGE_DEV.DBT_DEV.CHECK_CLOSE_DEADLINE(
         DATEADD(day, -1,
             CONVERT_TIMEZONE('America/New_York', CURRENT_TIMESTAMP())::date));
-ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_DEADLINE RESUME;
+-- DEV stays suspended. Only PROD should have an unattended deadline task.

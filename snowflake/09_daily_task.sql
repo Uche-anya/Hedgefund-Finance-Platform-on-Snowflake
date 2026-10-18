@@ -295,7 +295,4 @@ AS
         TO_DATE(SUBSTR(SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY'), 7)),
         'sim-close-20261008', '2026-10-07'::date);
 
--- The root was resumed on 2026-10-14 after the hosted producer and dbt checks.
--- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_RECORD RESUME;
--- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_BUILD RESUME;
--- ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY RESUME;
+-- The root ran during the October DEV pilot. It was suspended on October 18.

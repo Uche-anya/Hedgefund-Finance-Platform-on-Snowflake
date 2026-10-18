@@ -1,12 +1,12 @@
 # Environments and releases
 
-The scheduled producer and Snowflake tasks process each market day's **data**.
-CI checks a proposed **code** change. These are different runs: passing CI
-does not mean a daily close was delivered or validated.
+Producer and Snowflake tasks process each market day's **data**. CI checks a
+proposed **code** change. These are different runs: passing CI does not mean
+a daily close was delivered or validated.
 
 | Environment | Job | Current state |
 | --- | --- | --- |
-| `NORTHBRIDGE_DEV` | Develop and operate the current daily close | RAW deliveries, native dbt project and scheduled tasks are running |
+| `NORTHBRIDGE_DEV` | Develop and manually exercise the daily close | RAW deliveries and native dbt project exist; GitHub cron triggers were removed and Snowflake root/deadline tasks are suspended |
 | `NORTHBRIDGE_TEST` | Check candidate dbt code on isolated inputs | October 16 RAW fixture, dbt models and TEST-only service user; local and native dbt builds passed |
 | `NORTHBRIDGE_PROD` | Intended destination for an approved release | Database, schemas and roles only; no daily data, dbt project or tasks |
 
@@ -41,7 +41,7 @@ daily producer deliveries.
 Python table, stage and pipe names come from
 [`pipeline/environment.py`](../pipeline/environment.py). Set
 `NORTHBRIDGE_ENV=dev`, `test` or `prod` before starting a producer process;
-the daily GitHub workflows explicitly select DEV. dbt profiles use matching
+the manual DEV GitHub workflows explicitly select DEV. dbt profiles use matching
 targets, and deployment takes `--target`. The same code can therefore point
 at each environment's own objects. This is routing, not provisioning: TEST
 still has no daily pipes or schedules, and PROD has no RAW inputs or tasks.
@@ -72,8 +72,7 @@ key belongs to `NORTHBRIDGE_RELEASE_DEV`, a Snowflake service user with only
 the `NORTHBRIDGE_DBT_DEV` role. Generate a replacement locally with
 `python -m scripts.create_dev_release_key`, assign its public key to that
 user, and update the `NORTHBRIDGE_RELEASE_DEV_KEY_B64` environment secret.
-Do not release during the daily close window. This is a deliberate code
-release; the daily data jobs remain scheduled separately.
+This is a deliberate code release, separate from processing a day's data.
 
 If deployment or compile fails after the release key is ready, the workflow
 tries to redeploy and compile the last recorded good source. The workflow
@@ -91,10 +90,22 @@ deployed candidate `71751bf`, stopped at the deliberate verification failure,
 and restored `f6d7faa` from its saved commit folder. The restore compiled
 successfully. The GitHub run is failed by design.
 
+On October 18, 2026, unattended DEV processing was stopped: the repository's
+`NORTHBRIDGE_DAILY_ENABLED` and `NORTHBRIDGE_DIVIDENDS_ENABLED` switches were
+set to `false`, the five DEV GitHub cron triggers were removed, and
+[`27_pause_dev_schedules.sql`](../snowflake/27_pause_dev_schedules.sql)
+suspended `DAILY_CLOSE_READY` and `DAILY_CLOSE_DEADLINE`. BUILD and RECORD
+remain started child tasks; they have no scheduled root run. DEV workflows
+still support a reviewed manual dispatch. The earlier October 16 close remains
+historical evidence of an unattended DEV pilot, not a production run.
+
 PROD is deliberately gated. Its RAW tables, loader, grants, dbt project,
 producer routing, task graph and own service identity still need to be built
-and tested. Pointing a TEST job at a database named PROD would not produce a
-working production pipeline. Do not copy the live DEV schedules into PROD.
+and tested. There is currently **no unattended daily close**. PROD needs a
+defined opening state, an isolated delivery path, a full end-to-end close and
+failure rehearsal, then its own schedule and monitoring. Copying DEV's
+schedule or pointing a job at a database named PROD would not establish a
+working production pipeline.
 
 ## Release work still open
 
@@ -106,5 +117,6 @@ working production pipeline. Do not copy the live DEV schedules into PROD.
    any affected close before rerunning it.
 
 The GitHub `production` environment exists but has no PROD deployment
-credential or approval rule. This project should be described as an operating
-DEV pipeline with isolated TEST integration, not as a completed PROD release.
+credential or approval rule. This project should be described as a validated
+daily-close pilot with manual DEV, isolated TEST integration, and PROD still
+under construction.

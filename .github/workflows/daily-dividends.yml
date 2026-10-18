@@ -1,9 +1,6 @@
-name: Daily dividend delivery
+name: DEV dividend delivery
 
 on:
-  schedule:
-    - cron: '25 0-4 * * TUE-SAT'
-      timezone: America/New_York
   workflow_dispatch:
     inputs:
       business_date:
@@ -25,7 +22,7 @@ concurrency:
 
 jobs:
   deliver:
-    if: github.event_name != 'schedule' || vars.NORTHBRIDGE_DIVIDENDS_ENABLED == 'true'
+    environment: development
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -48,12 +45,8 @@ jobs:
         env:
           REQUESTED_DATE: ${{ inputs.business_date }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = schedule ]; then
-            python -m pipeline.schedule_day >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "business_date=$REQUESTED_DATE" >> "$GITHUB_OUTPUT"
-          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "business_date=$REQUESTED_DATE" >> "$GITHUB_OUTPUT"
       - name: Check connection settings
         if: steps.day.outputs.run == 'true'
         run: |
@@ -84,7 +77,7 @@ jobs:
         if: steps.day.outputs.run == 'true'
         env:
           REQUESTED_DATE: ${{ steps.day.outputs.business_date }}
-          SUBMIT: ${{ github.event_name == 'schedule' || inputs.submit }}
+          SUBMIT: ${{ inputs.submit }}
           SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_loader.p8
         run: |
           if [ "$SUBMIT" = true ]; then
