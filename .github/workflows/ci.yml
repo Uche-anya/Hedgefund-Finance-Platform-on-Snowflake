@@ -40,3 +40,44 @@ jobs:
               raise SystemExit('RAW sources for {} point at {}'.format(expected, databases))
           PY
           done
+
+  integration:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    environment: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      NORTHBRIDGE_DBT_USER: NORTHBRIDGE_CI_TEST
+      NORTHBRIDGE_DBT_KEY_PATH: ${{ runner.temp }}/northbridge_ci_test.p8
+      TEST_KEY_B64: ${{ secrets.NORTHBRIDGE_CI_TEST_KEY_B64 }}
+      DBT_BUSINESS_DATE: '2026-10-16'
+      DBT_OPENING_DATE: '2026-10-07'
+      DBT_SCENARIO_ID: sim-close-20261008
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt -r requirements-dbt.txt
+      - name: Write TEST key
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          value = os.environ.get('TEST_KEY_B64')
+          if not value:
+              raise SystemExit('CI TEST key is missing')
+          path = Path(os.environ['NORTHBRIDGE_DBT_KEY_PATH'])
+          path.write_bytes(base64.b64decode(value, validate=True))
+          path.chmod(0o600)
+          PY
+      - name: Build against TEST inputs
+        run: dbt build --project-dir dbt --profiles-dir dbt --target test --no-partial-parse

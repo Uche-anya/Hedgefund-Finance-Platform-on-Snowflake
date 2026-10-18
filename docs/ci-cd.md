@@ -1,74 +1,72 @@
-# CI/CD for the daily close
+# Environments and releases
 
-The scheduled producer and Snowflake task graph run **data** for each market day.
-CI/CD changes the **code and Snowflake objects** that those jobs run. A green
-pull-request check is not proof that a daily close ran.
+The scheduled producer and Snowflake tasks process each market day's **data**.
+CI checks a proposed **code** change. These are different runs: passing CI
+does not mean a daily close was delivered or validated.
 
-## What exists today
-
-The running daily pipeline is in `NORTHBRIDGE_DEV`. Pull requests run Python
-tests and an offline dbt parse for all three targets. The parse catches
-project/Jinja configuration errors; it does not execute SQL, read RAW data, or
-verify Snowflake permissions. The daily Snowflake task graph is deployed
-separately. `main` is not yet protected by required checks or review.
-
-| Environment | Purpose | State |
+| Environment | Job | Current state |
 | --- | --- | --- |
-| DEV: `NORTHBRIDGE_DEV` | Develop the current daily pipeline | RAW data, dbt models and scheduled tasks are running |
-| TEST: `NORTHBRIDGE_TEST` | Build candidate dbt code against isolated daily inputs | October 16 clone and local dbt build passed; hosted CI identity is not configured |
-| PROD: `NORTHBRIDGE_PROD` | Run approved code and daily deliveries | Database, schemas and roles exist, but no tables, dbt project or tasks exist |
+| `NORTHBRIDGE_DEV` | Develop and operate the current daily close | RAW deliveries, native dbt project and scheduled tasks are running |
+| `NORTHBRIDGE_TEST` | Check candidate dbt code on isolated inputs | October 16 RAW fixture, dbt models and TEST-only service user; local and native dbt builds passed |
+| `NORTHBRIDGE_PROD` | Intended destination for an approved release | Database, schemas and roles only; no daily data, dbt project or tasks |
 
-The TEST setup is [21_test_environment.sql](../snowflake/21_test_environment.sql).
-It clones the current daily RAW tables. The October 16 `dbt build --target test`
-passed with 12 models and 34 data tests. TEST has no scheduled tasks and does
-not receive daily producer deliveries.
+## What CI does
 
-The older `NORTHBRIDGE_CI_BASE` contains retired replay data and is not the
-TEST environment for the current daily pipeline. The GitHub `production`
-environment also exists, but has no deployment credential configured in GitHub
-or approval rule.
-These names alone do not make a production release path.
+Pull requests run Python tests and parse the dbt project for DEV, TEST and
+PROD. Parsing catches configuration errors but does not query Snowflake. PR
+code receives no Snowflake credential.
 
-## Release path
+After a merge to `main`, the same workflow runs `dbt build --target test`
+against the isolated October 16 fixture. This executes the models and data
+tests in Snowflake. The GitHub `ci` environment is limited to `main` and
+contains a key for `NORTHBRIDGE_CI_TEST`. That Snowflake user has only the
+`NORTHBRIDGE_DBT_TEST` role. It cannot deploy to DEV or PROD. The fixture is
+static: this check proves the code works for that known case, not for every
+future delivery.
 
-| Point | What runs | Pass condition |
-| --- | --- | --- |
-| Pull request | Python tests, offline dbt parse | Code is internally consistent; no Snowflake credential is exposed to PR code |
-| Integration | Build the candidate dbt project in an isolated Snowflake CI schema using a controlled input fixture | dbt models and data tests pass against Snowflake; no write to the daily schema |
-| Merge to `main` | Deploy the reviewed commit to development, then run a smoke build in a separate schema | The deployed commit and tested commit match |
-| Production promotion | Approve the same commit in the GitHub `production` environment; test a release candidate with a production-only identity, then deploy outside the close window | Candidate build/test passes before the scheduled task can use the new version |
-| Next market day | Scheduled producer, Snowpipe/COPY, readiness/build/record tasks, deadline check | One validated close per account and complete delivery evidence |
+The TEST key was generated with `python -m scripts.create_ci_test_key`.
+Its public half was assigned to the Snowflake service user; its private half
+is excluded from Git and stored as the `ci` environment secret
+`NORTHBRIDGE_CI_TEST_KEY_B64` (base64 of the PEM file). Rotate the key by
+creating a replacement, assigning the new public key to that user, updating
+the environment secret and testing a connection before retiring the old key.
 
-Integration and production deployment are **not implemented yet**. They need
-separate credentials and operational objects, not another job that points to
-`NORTHBRIDGE_DEV`. The dbt targets and RAW source declarations now select the
-matching database. The deployment script, task SQL and producer still name
-DEV; each must be made environment-specific before promotion is enabled.
+TEST was set up with [21_test_environment.sql](../snowflake/21_test_environment.sql).
+The local TEST build passed 12 models and 34 data tests. A native Snowflake
+dbt deployment and run also passed. TEST has no schedule and receives no
+daily producer deliveries.
 
-The CI identity should write only to its test schema. The deploy identity
-should own the dbt project object; it should not be the data-loader identity.
-Use a short-lived GitHub OIDC identity for CI/deployment if configured in the
-Snowflake account. Keep the Massive and loader credentials in the daily
-producer's environment, separate from code deployment. Restrict production
-promotion to `main`, require review, and make the passing integration check a
-required branch check. GitHub environment names alone do not enforce these
-rules.
+## Deploying code
 
-Deploy the exact tested commit SHA. Record the SHA and dbt project version in
-the release log. For rollback, redeploy the prior reviewed SHA and rerun the
-affected date only after checking the delivery registry and close status;
-never delete RAW deliveries to make a retry pass. Schema migrations need an
-explicit compatibility and rollback review before promotion.
+The native dbt deployment command now requires an explicit environment:
 
-## Next implementation slice
+```powershell
+python -m scripts.deploy_dbt_project --target dev
+python -m scripts.deploy_dbt_project --target test
+```
 
-1. Give trusted CI runs a limited test identity and run `dbt build`
-   on the cloned daily fixture in PRs from trusted branches. Forked PRs
-   should remain credential-free.
-2. Parameterize the deployment script, task SQL and producer for PROD. Create
-   PROD RAW tables and grants separately; do not clone live schedules.
-3. Add DEV deployment on `main` and a manual, approved PROD promotion for the
-   same commit. Turn on required checks and branch protection only after the
-   integration job is stable.
-4. Prove one normal daily close and one failed-input incident in PROD before
-   describing the release path as operational.
+It checks the Snowflake role and required RAW tables before uploading. The
+native runner also requires `--target`. These commands are currently run by
+an operator; the merge does not automatically deploy DEV. The daily tasks
+continue to use the previously deployed DEV project until that happens.
+
+PROD is deliberately gated. Its RAW tables, loader, grants, dbt project,
+producer routing, task graph and own service identity still need to be built
+and tested. Pointing a TEST job at a database named PROD would not produce a
+working production pipeline. Do not copy the live DEV schedules into PROD.
+
+## Release work still open
+
+1. Make DEV deployment reproducible from a reviewed commit and record the
+   deployed commit SHA. Verify its native dbt build before the next close.
+2. Build independent PROD ingestion and tasks. Promote the *same* commit that
+   passed TEST through a reviewed GitHub `production` environment.
+3. Protect `main` with required checks and review. The environment names alone
+   do not enforce this, and `main` is not protected today.
+4. Rehearse a normal close, an input failure and rollback in PROD. For rollback,
+   redeploy the prior reviewed commit; preserve RAW delivery history and assess
+   any affected close before rerunning it.
+
+The GitHub `production` environment exists but has no PROD deployment
+credential or approval rule. This project should be described as an operating
+DEV pipeline with isolated TEST integration, not as a completed PROD release.

@@ -92,17 +92,19 @@ retry a delivery. A manual dispatch defaults to preparation only; choose
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
-Pull requests and pushes to `main` run Python tests and an **offline** dbt parse
-in [CI](.github/workflows/ci.yml). These checks do not build in Snowflake or
-deploy code. The [CI/CD plan](docs/ci-cd.md) records the DEV, TEST and PROD boundaries
-and the work still needed. To run the Python checks locally:
+Pull requests run Python tests and an offline dbt parse. After a push to
+`main`, [CI](.github/workflows/ci.yml) also builds and tests dbt against an
+isolated Snowflake TEST fixture. The [environment guide](docs/ci-cd.md)
+records the DEV, TEST and PROD boundaries and what remains before PROD can
+run. To run the Python checks locally:
 
 ```powershell
 .\.venv\dbt\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
 ```
 
-To deploy a reviewed dbt change, use `python -m scripts.deploy_dbt_project`
-with the dbt service key configured. To run a reviewed Snowflake SQL file from
+To deploy a reviewed dbt change, use
+`python -m scripts.deploy_dbt_project --target dev` with the DEV dbt role and
+key configured. To run a reviewed Snowflake SQL file from
 the project terminal, use `python scripts/snow_admin.py --file <path>` with the
 admin connection configured. These are deployment commands, not daily jobs.
 

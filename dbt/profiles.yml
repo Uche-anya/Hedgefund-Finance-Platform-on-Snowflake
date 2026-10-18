@@ -4,7 +4,7 @@ northbridge:
     dev:
       type: snowflake
       account: gxmgyta-fq45953
-      user: NORTHBRIDGE_DBT
+      user: "{{ env_var('NORTHBRIDGE_DBT_USER', 'NORTHBRIDGE_DBT') }}"
       role: NORTHBRIDGE_DBT_DEV
       warehouse: COMPUTE_WH
       database: NORTHBRIDGE_DEV
@@ -15,7 +15,7 @@ northbridge:
     test:
       type: snowflake
       account: gxmgyta-fq45953
-      user: NORTHBRIDGE_DBT
+      user: "{{ env_var('NORTHBRIDGE_DBT_USER', 'NORTHBRIDGE_DBT') }}"
       role: NORTHBRIDGE_DBT_TEST
       warehouse: COMPUTE_WH
       database: NORTHBRIDGE_TEST
@@ -23,3 +23,14 @@ northbridge:
       threads: 1
       private_key_path: "{{ env_var('NORTHBRIDGE_DBT_KEY_PATH') }}"
       query_tag: northbridge_cash_test
+    prod:
+      type: snowflake
+      account: gxmgyta-fq45953
+      user: "{{ env_var('NORTHBRIDGE_DBT_USER', 'NORTHBRIDGE_DBT') }}"
+      role: NORTHBRIDGE_DBT_PROD
+      warehouse: COMPUTE_WH
+      database: NORTHBRIDGE_PROD
+      schema: DBT_PROD
+      threads: 1
+      private_key_path: "{{ env_var('NORTHBRIDGE_DBT_KEY_PATH') }}"
+      query_tag: northbridge_positions_prod

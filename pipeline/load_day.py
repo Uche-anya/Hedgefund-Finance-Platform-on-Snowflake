@@ -49,7 +49,7 @@ def delivery(data_dir, scenario, business_date, source):
     }
 
 
-def snowflake_connection():
+def snowflake_connection(database="NORTHBRIDGE_DEV", schema="RAW"):
     names = ("SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PRIVATE_KEY_FILE",
              "SNOWFLAKE_ROLE")
     missing = [name for name in names if not os.environ.get(name)]
@@ -65,8 +65,8 @@ def snowflake_connection():
         private_key_file=os.environ["SNOWFLAKE_PRIVATE_KEY_FILE"],
         private_key_file_pwd=os.environ.get("SNOWFLAKE_PRIVATE_KEY_PASSWORD"),
         role=os.environ["SNOWFLAKE_ROLE"],
-        database="NORTHBRIDGE_DEV",
-        schema="RAW",
+        database=database,
+        schema=schema,
     )
 
 
