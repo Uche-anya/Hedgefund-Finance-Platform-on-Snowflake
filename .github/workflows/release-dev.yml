@@ -28,6 +28,7 @@ jobs:
       SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_DEV
       SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_DEV
+      NORTHBRIDGE_ENV: dev
       SNOWFLAKE_PRIVATE_KEY_FILE: /tmp/northbridge_release_dev.p8
       RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_DEV_KEY_B64 }}
     steps:
@@ -62,6 +63,7 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt
       - name: Write DEV release key
+        id: key
         run: |
           python - <<'PY'
           import base64
@@ -76,12 +78,17 @@ jobs:
           path.chmod(0o600)
           PY
       - name: Deploy native dbt project
-        run: python -m scripts.deploy_dbt_project --target dev
+        run: |
+          python -m scripts.deploy_dbt_project --target dev \
+            --release-sha '${{ steps.candidate.outputs.sha }}'
       - name: Compile and record the release
         run: |
-          python -m scripts.record_dev_release \
+          python -m scripts.release_dbt record --target dev \
             --sha '${{ steps.candidate.outputs.sha }}' \
             --ci-run-id "$CI_RUN_ID"
+      - name: Restore the last good release
+        if: failure() && steps.candidate.outcome == 'success' && steps.key.outcome == 'success'
+        run: python -m scripts.release_dbt restore --target dev
       - name: Release summary
         env:
           RELEASE_SHA: ${{ steps.candidate.outputs.sha }}

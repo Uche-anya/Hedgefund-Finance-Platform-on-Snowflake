@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      NORTHBRIDGE_ENV: dev
       MASSIVE_API_KEY: ${{ secrets.MASSIVE_API_KEY }}
       SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: NORTHBRIDGE_LOADER

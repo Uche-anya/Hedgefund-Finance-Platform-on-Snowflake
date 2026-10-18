@@ -6,15 +6,17 @@ from datetime import date
 from pipeline.load_day import REGISTRY, snowflake_connection
 from pipeline.prices import MARKET, TABLE as PRICE_TABLE
 from pipeline.check_dividend_deadline import dividend_readiness
+from pipeline.environment import get_environment
 
 
+ENV = get_environment()
 RAW_TABLE = {
-    "oms": "NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS",
-    "settlements": "NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_EVENTS",
+    "oms": ENV.raw("DAILY_OMS_EVENTS"),
+    "settlements": ENV.raw("DAILY_SETTLEMENT_EVENTS"),
     "prices": PRICE_TABLE,
-    "opening_bank": "NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS",
-    "opening_admin": "NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS",
-    "bank": "NORTHBRIDGE_DEV.RAW.DAILY_BANK_STATEMENTS",
+    "opening_bank": ENV.raw("DAILY_OPENING_EVENTS"),
+    "opening_admin": ENV.raw("DAILY_OPENING_EVENTS"),
+    "bank": ENV.raw("DAILY_BANK_STATEMENTS"),
 }
 
 
@@ -81,7 +83,7 @@ def check_held_prices(cursor, business_date, scenario):
         " SUM(CASE payload:side::varchar WHEN 'BUY' THEN "
         " TRY_TO_DECIMAL(payload:quantity::varchar, 38, 9) "
         " WHEN 'SELL' THEN -TRY_TO_DECIMAL(payload:quantity::varchar, 38, 9) END) AS shares "
-        " FROM NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS "
+        " FROM " + RAW_TABLE["oms"] + " "
         " WHERE payload:scenario_id::varchar = %s "
         " AND TRY_TO_DATE(payload:business_date::varchar) <= TO_DATE(%s) "
         " GROUP BY 1, 2, 3 HAVING shares <> 0"

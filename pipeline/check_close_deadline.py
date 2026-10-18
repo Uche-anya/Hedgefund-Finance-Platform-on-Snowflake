@@ -4,11 +4,12 @@ import argparse
 from datetime import date, datetime, timezone
 
 from pipeline.load_day import snowflake_connection
+from pipeline.environment import get_environment
 from pipeline.schedule_day import scheduled_close
 from pipeline.us_equity_calendar import is_market_day
 
 
-RUNS = "NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS"
+RUNS = get_environment().raw("DAILY_CLOSE_RUNS")
 
 
 def check_close(cursor, business_date, scenario):

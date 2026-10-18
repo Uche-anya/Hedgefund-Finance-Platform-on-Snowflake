@@ -20,10 +20,11 @@ def main():
     if opening_date >= business_date:
         parser.error("Opening date must precede the close")
 
-    database, schema, role = TARGETS[args.target]
+    env = TARGETS[args.target]
+    database, schema, role = env.database, env.model_schema, env.dbt_role
     if os.environ.get("SNOWFLAKE_ROLE") != role:
         parser.error("{} run requires role {}".format(args.target, role))
-    project = "{}.{}.NORTHBRIDGE_DAILY".format(database, schema)
+    project = env.dbt("NORTHBRIDGE_DAILY")
     with snowflake_connection(database=database, schema=schema) as connection:
         with connection.cursor() as cursor:
             cursor.execute("SELECT CURRENT_ROLE()")

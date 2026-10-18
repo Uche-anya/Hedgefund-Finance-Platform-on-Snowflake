@@ -9,9 +9,11 @@ from pathlib import Path
 
 from pipeline.check_day import read_delivery
 from pipeline.load_day import REGISTRY, STAGE, snowflake_connection, stage_has_file
+from pipeline.environment import get_environment
 
 
-TABLE = "NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS"
+TABLE = get_environment().raw("DAILY_OPENING_EVENTS")
+FILE_FORMAT = get_environment().raw("DAILY_JSON")
 SOURCES = {
     "opening_bank": ("bank_cash", "balances.jsonl", "statement_date", "closing_balance", "simulated_bank"),
     "opening_admin": ("fund_admin", "events.jsonl", "event_date", "amount", "simulated_fund_administrator"),
@@ -96,7 +98,7 @@ def submit(cursor, item):
         "COPY INTO " + TABLE + " (payload, source_file, source_row_number) "
         "FROM (SELECT t.$1, METADATA$FILENAME, METADATA$FILE_ROW_NUMBER "
         "FROM " + stage_file + " t) "
-        "FILE_FORMAT = (FORMAT_NAME = NORTHBRIDGE_DEV.RAW.DAILY_JSON) "
+        "FILE_FORMAT = (FORMAT_NAME = " + FILE_FORMAT + ") "
         "ON_ERROR = ABORT_STATEMENT"
     )
     cursor.execute("SELECT COUNT(*) FROM " + TABLE + " WHERE ENDSWITH(source_file, %s)",

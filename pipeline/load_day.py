@@ -8,13 +8,15 @@ from datetime import date
 from pathlib import Path
 
 from pipeline.check_day import check_oms_reports, closing_prices, read_delivery
+from pipeline.environment import get_environment
 
 
-STAGE = "NORTHBRIDGE_DEV.RAW.DAILY_LANDING"
-REGISTRY = "NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES"
+ENV = get_environment()
+STAGE = ENV.raw("DAILY_LANDING")
+REGISTRY = ENV.raw("DAILY_DELIVERIES")
 PIPE = {
-    "oms": "NORTHBRIDGE_DEV.RAW.DAILY_OMS_PIPE",
-    "settlements": "NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_PIPE",
+    "oms": ENV.raw("DAILY_OMS_PIPE"),
+    "settlements": ENV.raw("DAILY_SETTLEMENT_PIPE"),
 }
 
 
@@ -49,7 +51,7 @@ def delivery(data_dir, scenario, business_date, source):
     }
 
 
-def snowflake_connection(database="NORTHBRIDGE_DEV", schema="RAW"):
+def snowflake_connection(database=None, schema="RAW"):
     names = ("SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PRIVATE_KEY_FILE",
              "SNOWFLAKE_ROLE")
     missing = [name for name in names if not os.environ.get(name)]
@@ -65,7 +67,7 @@ def snowflake_connection(database="NORTHBRIDGE_DEV", schema="RAW"):
         private_key_file=os.environ["SNOWFLAKE_PRIVATE_KEY_FILE"],
         private_key_file_pwd=os.environ.get("SNOWFLAKE_PRIVATE_KEY_PASSWORD"),
         role=os.environ["SNOWFLAKE_ROLE"],
-        database=database,
+        database=database or ENV.database,
         schema=schema,
     )
 

@@ -4,12 +4,13 @@ import argparse
 from datetime import date, datetime, timezone
 
 from pipeline.load_day import snowflake_connection
+from pipeline.environment import get_environment
 from pipeline.schedule_day import scheduled_close
 from pipeline.us_equity_calendar import is_market_day
 
 
-DELIVERIES = "NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES"
-EVENTS = "NORTHBRIDGE_DEV.RAW.DAILY_DIVIDEND_EVENTS"
+DELIVERIES = get_environment().raw("DAILY_DELIVERIES")
+EVENTS = get_environment().raw("DAILY_DIVIDEND_EVENTS")
 
 
 def dividend_readiness(cursor, business_date):

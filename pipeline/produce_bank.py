@@ -11,15 +11,17 @@ from pathlib import Path
 from pipeline import bank_statements
 from pipeline.check_raw import check_source
 from pipeline.load_day import snowflake_connection
+from pipeline.environment import get_environment
 from pipeline.us_equity_calendar import is_market_day, previous_market_day
 
 
-OPENING = "NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS"
-DELIVERIES = "NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES"
-TRADES = "NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS"
-STATEMENTS = "NORTHBRIDGE_DEV.RAW.DAILY_BANK_STATEMENTS"
-EXPOSURE = "NORTHBRIDGE_DEV.DBT_DEV.FCT_DIVIDEND_EXPOSURE"
-CLOSE_RUNS = "NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS"
+ENV = get_environment()
+OPENING = ENV.raw("DAILY_OPENING_EVENTS")
+DELIVERIES = ENV.raw("DAILY_DELIVERIES")
+TRADES = ENV.raw("DAILY_OMS_EVENTS")
+STATEMENTS = ENV.raw("DAILY_BANK_STATEMENTS")
+EXPOSURE = ENV.dbt("FCT_DIVIDEND_EXPOSURE")
+CLOSE_RUNS = ENV.raw("DAILY_CLOSE_RUNS")
 
 
 def money(value):

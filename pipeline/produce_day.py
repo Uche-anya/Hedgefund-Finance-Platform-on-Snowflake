@@ -6,12 +6,16 @@ from pathlib import Path
 
 from pipeline import daily_simulator, load_day, massive_prices, prices
 from pipeline.check_day import closing_prices
+from pipeline.environment import get_environment
 from pipeline.us_equity_calendar import is_market_day
+
+
+ENV = get_environment()
 
 
 def close_is_validated(cursor, business_date, scenario):
     cursor.execute(
-        "SELECT COUNT(*) FROM NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS "
+        "SELECT COUNT(*) FROM " + ENV.raw("DAILY_CLOSE_RUNS") + " "
         "WHERE business_date = %s AND scenario_id = %s AND status = 'VALIDATED'",
         (business_date, scenario)
     )
@@ -20,8 +24,8 @@ def close_is_validated(cursor, business_date, scenario):
 
 def save_market_evidence(cursor, price_file, delivery_id):
     folder = price_file.parent
-    target = ("@NORTHBRIDGE_DEV.RAW.DAILY_LANDING/provider_evidence/"
-              "delivery_id={}/".format(delivery_id))
+    target = ("@{}/provider_evidence/delivery_id={}/".format(
+        ENV.raw("DAILY_LANDING"), delivery_id))
     for name in ("prices.csv", "response.json", "manifest.json"):
         path = folder / name
         if not path.is_file():

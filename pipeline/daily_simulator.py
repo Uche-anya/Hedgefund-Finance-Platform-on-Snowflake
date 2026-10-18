@@ -4,15 +4,19 @@ from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
 from pipeline.sample_close import TRADES, save
+from pipeline.environment import get_environment
 from pipeline.us_equity_calendar import (
     is_market_day, is_settlement_day, next_settlement_day, previous_market_day
 )
 
 
-NAV = "NORTHBRIDGE_DEV.DBT_DEV.FCT_NAV_DAILY"
-RUNS = "NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS"
-PRICES = "NORTHBRIDGE_DEV.RAW.DAILY_PRICE_EVENTS"
-OMS = "NORTHBRIDGE_DEV.RAW.DAILY_OMS_EVENTS"
+ENV = get_environment()
+NAV = ENV.dbt("FCT_NAV_DAILY")
+RUNS = ENV.raw("DAILY_CLOSE_RUNS")
+PRICES = ENV.raw("DAILY_PRICE_EVENTS")
+OMS = ENV.raw("DAILY_OMS_EVENTS")
+DELIVERIES = ENV.raw("DAILY_DELIVERIES")
+SETTLEMENTS = ENV.raw("DAILY_SETTLEMENT_EVENTS")
 
 # The first four names are the pilot. From October 14, each account trades
 # four names per session from a wider, fixed equity list.
@@ -81,7 +85,7 @@ def prior_prices(cursor, previous, business_date):
         "SELECT p.payload:universe_ticker::varchar, "
         "TRY_TO_DECIMAL(p.payload:close_price::varchar, 38, 9) "
         "FROM " + PRICES + " p "
-        "JOIN NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES d "
+        "JOIN " + DELIVERIES + " d "
         "ON d.source_name = 'prices' AND d.scenario_id = 'massive' "
         "AND d.status = 'LOADED' AND d.business_date = TO_DATE(%s) "
         "AND ENDSWITH(p.source_file, d.stage_path) "
@@ -116,7 +120,7 @@ def unsettled_trades(cursor, business_date, scenario):
     trades = cursor.fetchall()
     cursor.execute(
         "SELECT DISTINCT payload:execution_id::varchar "
-        "FROM NORTHBRIDGE_DEV.RAW.DAILY_SETTLEMENT_EVENTS "
+        "FROM " + SETTLEMENTS + " "
         "WHERE payload:scenario_id::varchar = %s "
         "AND payload:settlement_status::varchar = 'SETTLED' "
         "AND TRY_TO_DATE(payload:settlement_date::varchar) < TO_DATE(%s)",

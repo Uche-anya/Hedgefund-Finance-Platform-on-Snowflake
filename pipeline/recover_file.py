@@ -10,6 +10,10 @@ from pathlib import Path
 
 from pipeline.check_raw import RAW_TABLE
 from pipeline.load_day import REGISTRY, STAGE, delivery, snowflake_connection, stage_has_file
+from pipeline.environment import get_environment
+
+
+FILE_FORMAT = get_environment().raw("DAILY_JSON")
 
 
 def recover(cursor, item):
@@ -48,7 +52,7 @@ def recover(cursor, item):
         "COPY INTO " + table + " (payload, source_file, source_row_number) "
         "FROM (SELECT t.$1, METADATA$FILENAME, METADATA$FILE_ROW_NUMBER "
         "FROM " + stage_file + " t) "
-        "FILE_FORMAT = (FORMAT_NAME = NORTHBRIDGE_DEV.RAW.DAILY_JSON) "
+        "FILE_FORMAT = (FORMAT_NAME = " + FILE_FORMAT + ") "
         "ON_ERROR = ABORT_STATEMENT"
     )
     cursor.execute("SELECT COUNT(*) FROM " + table + " WHERE ENDSWITH(source_file, %s)",
