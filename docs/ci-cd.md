@@ -7,8 +7,8 @@ a daily close was delivered or validated.
 | Environment | Job | Current state |
 | --- | --- | --- |
 | `NORTHBRIDGE_DEV` | Develop and manually exercise the daily close | RAW deliveries and native dbt project exist; GitHub cron triggers were removed and Snowflake root/deadline tasks are suspended |
-| `NORTHBRIDGE_TEST` | Check candidate dbt code on isolated inputs | October 16 RAW fixture, dbt models and TEST-only service user; local and native dbt builds passed |
-| `NORTHBRIDGE_PROD` | Intended destination for an approved release | Database, schemas and roles only; no daily data, dbt project or tasks |
+| `NORTHBRIDGE_TEST` | Check candidate code and rehearse deliveries | October 16 CI fixture plus a separate October 6 first-day delivery; no schedule |
+| `NORTHBRIDGE_PROD` | Destination for approved code and the unattended daily close | Separate loader and release users; manual October 16 and 19 closes validated; schedules are off |
 
 ## What CI does
 
@@ -31,10 +31,13 @@ is excluded from Git and stored as the `ci` environment secret
 creating a replacement, assigning the new public key to that user, updating
 the environment secret and testing a connection before retiring the old key.
 
-TEST was set up with [21_test_environment.sql](../snowflake/21_test_environment.sql).
+TEST was set up with [21_test_environment.sql](../snowflake/history/21_test_environment.sql).
 The local TEST build passed 12 models and 34 data tests. A native Snowflake
-dbt deployment and run also passed. TEST has no schedule and receives no
-daily producer deliveries.
+dbt deployment and run also passed. TEST has no schedule. The
+[October 6 rehearsal](test-rehearsal.md) ran a separate dated delivery through
+Snowpipe, readiness, dbt, bank reconciliation and one validated close. The
+current CI job still checks dbt against the fixed October 16 fixture; it does
+not run the complete delivery automatically.
 
 ## Deploying code
 
@@ -44,7 +47,7 @@ Python table, stage and pipe names come from
 the manual DEV GitHub workflows explicitly select DEV. dbt profiles use matching
 targets, and deployment takes `--target`. The same code can therefore point
 at each environment's own objects. This is routing, not provisioning: TEST
-still has no daily pipes or schedules, and PROD has no RAW inputs or tasks.
+has no scheduled daily run, and PROD has no task schedule yet.
 
 The native dbt deployment command requires an explicit environment:
 
@@ -93,30 +96,54 @@ successfully. The GitHub run is failed by design.
 On October 18, 2026, unattended DEV processing was stopped: the repository's
 `NORTHBRIDGE_DAILY_ENABLED` and `NORTHBRIDGE_DIVIDENDS_ENABLED` switches were
 set to `false`, the five DEV GitHub cron triggers were removed, and
-[`27_pause_dev_schedules.sql`](../snowflake/27_pause_dev_schedules.sql)
+[`27_pause_dev_schedules.sql`](../snowflake/history/27_pause_dev_schedules.sql)
 suspended `DAILY_CLOSE_READY` and `DAILY_CLOSE_DEADLINE`. BUILD and RECORD
 remain started child tasks; they have no scheduled root run. DEV workflows
 still support a reviewed manual dispatch. The earlier October 16 close remains
 historical evidence of an unattended DEV pilot, not a production run.
 
-PROD is deliberately gated. Its RAW tables, loader, grants, dbt project,
-producer routing, task graph and own service identity still need to be built
-and tested. There is currently **no unattended daily close**. PROD needs a
-defined opening state, an isolated delivery path, a full end-to-end close and
-failure rehearsal, then its own schedule and monitoring. Copying DEV's
-schedule or pointing a job at a database named PROD would not establish a
-working production pipeline.
+PROD is deliberately gated. [01_raw.sql](../snowflake/prod/01_raw.sql)
+created its own RAW tables, landing stage and Snowpipe pipes. Scoped grants
+from [02_access.sql](../snowflake/prod/02_access.sql) and the read-only
+roll-forward grants were applied. Separate PROD loader and release service
+users use different keys. The [October 16 rehearsal](prod-rehearsal.md) loaded
+real Massive data and fictional fund inputs, passed RAW readiness and dbt,
+and recorded one validated close. The next October 19 market day also passed
+with four settlement confirmations and two bank matches. The same CI-passed dbt commit was deployed
+to a versioned PROD stage path and compiled. There is still **no unattended
+PROD daily close**: the producer schedule, task graph, deadline monitor and
+scheduled next-day rehearsal remains open.
+
+[Release dbt to PROD](../.github/workflows/release-prod.yml) is manual and
+disabled by `SNOWFLAKE_PROD_DEPLOY_ENABLED=false`. When PROD is ready, it will
+accept only the current `main` commit whose CI run passed the TEST integration
+job. The GitHub `production` environment must hold a separate PROD release key
+and a reviewer rule before enabling the workflow. Its compiled dbt context uses
+the PROD opening date and scenario; compiling is a deployment check, not a
+daily NAV calculation. DEV releases continue to use the DEV role and inputs.
 
 ## Release work still open
 
 1. Protect `main` with required checks and review; it is not protected today.
-2. Build independent PROD ingestion and tasks. Promote the *same* commit that
-   passed TEST through a reviewed GitHub `production` environment.
-3. Rehearse a normal close, an input failure and rollback in PROD. For rollback,
+2. Automate the proved TEST delivery rehearsal in CI or a controlled release
+   gate, and test a late input arriving after readiness first says wait.
+3. Move the locally rehearsed PROD dbt release through the reviewed GitHub
+   `production` environment, using its separate release credential.
+4. Rehearse a scheduled next-day close, a late or missing input and rollback
+   in PROD. For rollback,
    redeploy the prior reviewed commit; preserve RAW delivery history and assess
    any affected close before rerunning it.
 
 The GitHub `production` environment exists but has no PROD deployment
-credential or approval rule. This project should be described as a validated
-daily-close pilot with manual DEV, isolated TEST integration, and PROD still
-under construction.
+credential or approval rule. The RAW objects alone do not make this an
+operating production pipeline.
+
+The proposed [PROD daily delivery workflow](../.github/workflows/prod-daily.yml)
+combines market, dividend and simulated bank deliveries in one job. It waits
+for both Snowpipe event files before preparing bank cash. Its switch,
+`NORTHBRIDGE_PROD_DAILY_ENABLED`, is off; the `production-data` environment
+still needs its own loader key and Massive key. The proposed
+[task graph](../snowflake/prod/05_tasks.sql) and its
+[task-owner grants](../snowflake/prod/04_task_access.sql) are not applied.
+Keep the graph suspended until a scheduled next-day delivery, missing-input
+case and deadline check are rehearsed.

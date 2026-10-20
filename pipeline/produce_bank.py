@@ -81,13 +81,14 @@ def ledger(cursor, business_date, opening_date, scenario):
     if len(accounts) != 2:
         raise ValueError("Expected two bank accounts")
 
-    cursor.execute(
-        "SELECT COUNT(*) FROM " + EXPOSURE + " WHERE scenario_id = %s "
-        "AND pay_date > TO_DATE(%s) AND pay_date <= TO_DATE(%s) "
-        "AND expected_cash_usd <> 0", (scenario, start, business_date)
-    )
-    if cursor.fetchone()[0]:
-        raise ValueError("Dividend payment evidence is needed for the bank ledger")
+    if previous:
+        cursor.execute(
+            "SELECT COUNT(*) FROM " + EXPOSURE + " WHERE scenario_id = %s "
+            "AND pay_date > TO_DATE(%s) AND pay_date <= TO_DATE(%s) "
+            "AND expected_cash_usd <> 0", (scenario, start, business_date)
+        )
+        if cursor.fetchone()[0]:
+            raise ValueError("Dividend payment evidence is needed for the bank ledger")
 
     cursor.execute(
         "SELECT r.payload:execution_id::varchar, r.payload:account_id::varchar, "

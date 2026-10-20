@@ -22,7 +22,7 @@ $4,994,888.65 and $4,978,139.30. The October 16 statement already loaded
 is a balance-only legacy delivery; its validated close is unchanged. The new
 ledger format applies to future deliveries.
 
-Run `snowflake/25_bank_ledger_test.sql` in TEST to see a $50 bank fee produce
+Run `snowflake/history/25_bank_ledger_test.sql` in TEST to see a $50 bank fee produce
 `BREAK`. The script then adds a bank reversal, which returns the comparison
 to `MATCH`, and rolls the whole exercise back. This illustrates a **bank
 error** corrected by the bank. A genuine fee would remain a break until an

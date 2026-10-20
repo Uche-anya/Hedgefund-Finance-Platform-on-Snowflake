@@ -1,6 +1,7 @@
 """Check a deployed dbt project and keep a record of the running commit."""
 
 import argparse
+from datetime import date
 import os
 import re
 
@@ -17,12 +18,22 @@ def check_role(cursor, env):
 
 
 def compile_project(cursor, env):
+    business_date = os.environ.get("DBT_BUSINESS_DATE", "2026-10-16")
+    opening_date = os.environ.get("DBT_OPENING_DATE", "2026-10-07")
+    scenario = os.environ.get("DBT_SCENARIO_ID", "sim-close-20261008")
+    if env.name == "prod" and not all(os.environ.get(name) for name in (
+            "DBT_BUSINESS_DATE", "DBT_OPENING_DATE", "DBT_SCENARIO_ID")):
+        raise ValueError("PROD release needs its own close date, opening date and scenario")
+    if date.fromisoformat(opening_date) >= date.fromisoformat(business_date):
+        raise ValueError("Opening date must precede the close date")
+    if not re.fullmatch(r"[a-zA-Z0-9_-]{1,100}", scenario):
+        raise ValueError("Invalid scenario ID")
     cursor.execute(
         "EXECUTE DBT PROJECT " + env.dbt("NORTHBRIDGE_DAILY") + " "
         "ARGS = 'compile --target " + env.name + "' DBT_VERSION = '1.12.3' "
-        "ENV_VARS = ('DBT_BUSINESS_DATE' = '2026-10-16', "
-        "'DBT_OPENING_DATE' = '2026-10-07', "
-        "'DBT_SCENARIO_ID' = 'sim-close-20261008')"
+        "ENV_VARS = ('DBT_BUSINESS_DATE' = '" + business_date + "', "
+        "'DBT_OPENING_DATE' = '" + opening_date + "', "
+        "'DBT_SCENARIO_ID' = '" + scenario + "')"
     )
     result = cursor.fetchone()
     if not result or result[0] is not True:

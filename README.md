@@ -18,8 +18,10 @@ bank evidence. The output is a **validated calculation**, not a published NAV.
 
 DEV automated schedules were stopped on October 18, 2026. Its GitHub
 workflows are manual, and the Snowflake readiness root and deadline task are
-suspended. PROD has not been provisioned for daily runs, so there is currently
-no unattended close. The reviewed
+suspended. PROD completed [manual October 16 and 19 closes](docs/prod-rehearsal.md)
+with its own deliveries, service identities and dbt release. Its daily
+producer and Snowflake task schedules are not active. There is currently no
+unattended PROD close. The reviewed
 [2026 US equity calendar](config/us_equity_calendar_2026.json) skips market
 holidays and distinguishes them from settlement holidays.
 
@@ -58,7 +60,7 @@ stock-borrow accounting.
 Massive dividend events remain in RAW. The review queue separates ordinary
 events from changed terms, unusual distributions and uncertain security
 identity. As of October 16, 2026, three of the 20 simulated securities have
-approved mappings; the others remain pending. A ticker match alone does not approve a
+approved mappings in DEV; the PROD mappings remain pending. A ticker match alone does not approve a
 security. The dbt build stops if a held security has an unresolved relevant
 event rather than silently changing the booked amount.
 
@@ -75,7 +77,8 @@ event rather than silently changing the booked amount.
   write them. Secrets are kept outside Git. The development warehouse has a
   resource monitor.
 
-The [Snowflake SQL](snowflake) contains the RAW, access and task definitions.
+The [Snowflake SQL](snowflake/README.md) separates current deployment files
+from earlier DEV and incident scripts.
 `pipeline.recover_file` is an operator path for a failed Snowpipe file, after
 checking copy history and confirming no RAW rows loaded. It is not part of the
   normal delivery path.
@@ -91,7 +94,9 @@ the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
 Pull requests run Python tests and an offline dbt parse. After a push to
 `main`, [CI](.github/workflows/ci.yml) also builds and tests dbt against an
-isolated Snowflake TEST fixture. The [environment guide](docs/ci-cd.md)
+isolated Snowflake TEST fixture. A separate
+[TEST delivery rehearsal](docs/test-rehearsal.md) loaded a dated first day
+through Snowpipe, dbt and bank reconciliation; it has no schedule. The [environment guide](docs/ci-cd.md)
 records the DEV, TEST and PROD boundaries and what remains before PROD can
 run. To run the Python checks locally:
 
@@ -109,7 +114,7 @@ admin connection configured. These are deployment commands, not daily jobs.
 
 ## Verified example
 
-The [October 16 acceptance queries](snowflake/26_acceptance_20261016.sql)
+The [October 16 acceptance queries](snowflake/history/26_acceptance_20261016.sql)
 show 12,630 market prices, 7,133 dividend records, eight trades, eight
 settlements and two bank balances delivered. Snowflake recorded one
 `VALIDATED` close. The account NAVs were $5,001,300.80 and $4,999,487.75;
@@ -118,7 +123,7 @@ both bank cash comparisons were `MATCH`.
 That bank delivery used the earlier balance-only format. The new transaction
 ledger reproduced both balances in a dry run and passed a
 [hosted producer run](https://github.com/Uche-anya/Hedgefund-Finance-Platform-on-Snowflake/actions/runs/39062827080).
-The [TEST incident script](snowflake/25_bank_ledger_test.sql) showed a $50
+The [TEST incident script](snowflake/history/25_bank_ledger_test.sql) showed a $50
 bank fee produce `BREAK`, followed by `MATCH` when the bank reversed its
 error. The TEST changes were rolled back. This proves the calculation and
 reconciliation checks; it does not prove an unattended close using the new
@@ -126,7 +131,7 @@ ledger delivery.
 
 ## Current boundary
 
-This is a validated daily calculation path, not an operating PROD pipeline or a fully independent fund
+This is a validated daily calculation path, not an unattended PROD pipeline or a fully independent fund
 accounting platform. It still needs independent broker and bank evidence,
 payment reconciliation, a reviewed NAV publication decision, and reliable
 producer scheduling beyond GitHub Actions. The 2026 market calendar must be

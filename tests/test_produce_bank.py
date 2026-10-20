@@ -9,9 +9,11 @@ class Cursor:
         self.paid_dividends = paid_dividends
         self.previous = previous
         self.statement = ""
+        self.statements = []
 
     def execute(self, statement, params):
         self.statement = statement
+        self.statements.append(statement)
 
     def fetchall(self):
         if "DAILY_OMS_EVENTS" not in self.statement:
@@ -31,15 +33,18 @@ class Cursor:
 class BankProducerTests(unittest.TestCase):
     @patch("pipeline.produce_bank.check_source", return_value=(True, "ready"))
     def test_due_trade_reduces_bank_cash(self, _):
-        start, accounts = ledger(Cursor(), "2026-10-16", "2026-10-07", "SCENARIO")
+        cursor = Cursor()
+        start, accounts = ledger(cursor, "2026-10-16", "2026-10-07", "SCENARIO")
         self.assertEqual(start, "2026-10-07")
         self.assertEqual(str(accounts["ACCOUNT-1"]["closing_balance"]), "75.00")
         self.assertEqual(accounts["ACCOUNT-2"]["postings"], [])
+        self.assertFalse(any("FCT_DIVIDEND_EXPOSURE" in sql for sql in cursor.statements))
 
     @patch("pipeline.produce_bank.check_source", return_value=(True, "ready"))
     def test_paid_dividend_stops_without_bank_payment_evidence(self, _):
         with self.assertRaisesRegex(ValueError, "Dividend payment evidence"):
-            ledger(Cursor(paid_dividends=1), "2026-10-16", "2026-10-07", "SCENARIO")
+            ledger(Cursor(paid_dividends=1, previous="2026-10-15"),
+                   "2026-10-16", "2026-10-07", "SCENARIO")
 
     @patch("pipeline.produce_bank.check_source", return_value=(True, "ready"))
     def test_missing_previous_market_day_stops(self, _):

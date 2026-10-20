@@ -2,13 +2,29 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from scripts.release_dbt import record_release, restore_last_release
+from scripts.release_dbt import compile_project, record_release, restore_last_release
+from pipeline.environment import get_environment
 
 
 SHA = "a" * 40
 
 
 class ReleaseRecordTests(unittest.TestCase):
+    def test_prod_compile_uses_prod_dates_and_scenario(self):
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (True, None)
+        settings = {
+            "DBT_BUSINESS_DATE": "2026-10-16",
+            "DBT_OPENING_DATE": "2026-10-15",
+            "DBT_SCENARIO_ID": "sim-prod-20261016",
+        }
+        with patch.dict(os.environ, settings):
+            compile_project(cursor, get_environment("prod"))
+        sql = cursor.execute.call_args.args[0]
+        self.assertIn("compile --target prod", sql)
+        self.assertIn("'DBT_OPENING_DATE' = '2026-10-15'", sql)
+        self.assertIn("'DBT_SCENARIO_ID' = 'sim-prod-20261016'", sql)
+
     @patch("scripts.release_dbt.snowflake_connection")
     def test_bad_sha_never_connects(self, connect):
         with self.assertRaisesRegex(ValueError, "commit SHA"):

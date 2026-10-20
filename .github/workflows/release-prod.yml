@@ -1,0 +1,94 @@
+name: Release dbt to PROD
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful main-branch CI run ID
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: dbt-prod-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main' && vars.SNOWFLAKE_PROD_DEPLOY_ENABLED == 'true'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+      NORTHBRIDGE_ENV: prod
+      SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_PROD
+      SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_PROD
+      SNOWFLAKE_PRIVATE_KEY_FILE: /tmp/northbridge_release_prod.p8
+      RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_PROD_KEY_B64 }}
+      DBT_BUSINESS_DATE: '2026-10-16'
+      DBT_OPENING_DATE: '2026-10-15'
+      DBT_SCENARIO_ID: sim-prod-20261016
+    steps:
+      - name: Check the tested commit
+        id: candidate
+        run: |
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'Invalid CI run ID' >&2; exit 1; }
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID")
+          echo "$run" | jq -e --arg repo "$GITHUB_REPOSITORY" '
+            .conclusion == "success" and .event == "push" and
+            .head_branch == "main" and .head_repository.full_name == $repo and
+            .path == ".github/workflows/ci.yml"
+          ' >/dev/null
+          integration=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID/jobs" \
+            --jq '.jobs[] | select(.name == "integration") | .conclusion')
+          [ "$integration" = success ] || { echo 'TEST integration did not pass' >&2; exit 1; }
+          sha=$(echo "$run" | jq -r '.head_sha')
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')
+          if [ "$sha" != "$current" ]; then
+            echo 'A newer commit is on main. Test and release that commit instead.' >&2
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.candidate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Write PROD release key
+        id: key
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          value = os.environ.get('RELEASE_KEY_B64')
+          if not value:
+              raise SystemExit('PROD release key is missing')
+          path = Path(os.environ['SNOWFLAKE_PRIVATE_KEY_FILE'])
+          path.write_bytes(base64.b64decode(value, validate=True))
+          path.chmod(0o600)
+          PY
+      - name: Deploy native dbt project
+        run: |
+          python -m scripts.deploy_dbt_project --target prod \
+            --release-sha '${{ steps.candidate.outputs.sha }}'
+      - name: Compile and record the release
+        run: |
+          python -m scripts.release_dbt record --target prod \
+            --sha '${{ steps.candidate.outputs.sha }}' \
+            --ci-run-id "$CI_RUN_ID"
+      - name: Restore the last good release
+        if: failure() && steps.candidate.outcome == 'success' && steps.key.outcome == 'success'
+        run: python -m scripts.release_dbt restore --target prod

@@ -1,0 +1,107 @@
+
+USE ROLE ACCOUNTADMIN;
+
+CREATE DATABASE IF NOT EXISTS NORTHBRIDGE_PROD;
+CREATE SCHEMA IF NOT EXISTS NORTHBRIDGE_PROD.RAW;
+CREATE SCHEMA IF NOT EXISTS NORTHBRIDGE_PROD.DBT_PROD;
+
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_OMS_EVENTS (
+    payload VARIANT, source_file VARCHAR, source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_SETTLEMENT_EVENTS (
+    payload VARIANT, source_file VARCHAR, source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_PRICE_EVENTS (
+    payload VARIANT, source_file VARCHAR, source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_DIVIDEND_EVENTS (
+    payload VARIANT, source_file VARCHAR, source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_OPENING_EVENTS (
+    payload VARIANT, source_file VARCHAR, source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_BANK_STATEMENTS (
+    payload VARIANT, source_file VARCHAR, source_row_number NUMBER,
+    loaded_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_DELIVERIES (
+    delivery_id VARCHAR, source_name VARCHAR, business_date DATE,
+    scenario_id VARCHAR, expected_rows NUMBER, file_sha256 VARCHAR,
+    stage_path VARCHAR, status VARCHAR,
+    registered_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(),
+    submitted_at TIMESTAMP_LTZ
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_CLOSE_RUNS (
+    run_id VARCHAR, business_date DATE, scenario_id VARCHAR,
+    opening_date DATE, status VARCHAR, detail VARCHAR,
+    started_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP(),
+    finished_at TIMESTAMP_LTZ
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DIVIDEND_REVIEWS (
+    review_id VARCHAR, event_id VARCHAR, terms_hash VARCHAR,
+    decision VARCHAR, instrument_id VARCHAR, reviewer VARCHAR,
+    reason VARCHAR, reviewed_at TIMESTAMP_LTZ DEFAULT CURRENT_TIMESTAMP()
+);
+CREATE TABLE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.SECURITY_MAPPINGS (
+    instrument_id VARCHAR, provider_ticker VARCHAR, valid_from DATE,
+    valid_to DATE, status VARCHAR, provider_cik VARCHAR,
+    share_class_figi VARCHAR, evidence_ref VARCHAR,
+    approved_by VARCHAR, approved_at TIMESTAMP_LTZ, note VARCHAR
+);
+
+CREATE FILE FORMAT IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_JSON
+    TYPE = JSON COMPRESSION = NONE;
+CREATE STAGE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_LANDING
+    FILE_FORMAT = NORTHBRIDGE_PROD.RAW.DAILY_JSON;
+
+-- The loader calls insertFiles after PUT. A stage upload alone does not load rows.
+CREATE PIPE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_OMS_PIPE
+    AUTO_INGEST = FALSE
+    AS COPY INTO NORTHBRIDGE_PROD.RAW.DAILY_OMS_EVENTS
+        (payload, source_file, source_row_number)
+    FROM (
+        SELECT t.$1, METADATA$FILENAME, METADATA$FILE_ROW_NUMBER
+        FROM @NORTHBRIDGE_PROD.RAW.DAILY_LANDING/oms/ t
+    )
+    FILE_FORMAT = (FORMAT_NAME = NORTHBRIDGE_PROD.RAW.DAILY_JSON)
+    PATTERN = '.*[.]jsonl'
+    ON_ERROR = SKIP_FILE;
+
+CREATE PIPE IF NOT EXISTS NORTHBRIDGE_PROD.RAW.DAILY_SETTLEMENT_PIPE
+    AUTO_INGEST = FALSE
+    AS COPY INTO NORTHBRIDGE_PROD.RAW.DAILY_SETTLEMENT_EVENTS
+        (payload, source_file, source_row_number)
+    FROM (
+        SELECT t.$1, METADATA$FILENAME, METADATA$FILE_ROW_NUMBER
+        FROM @NORTHBRIDGE_PROD.RAW.DAILY_LANDING/settlements/ t
+    )
+    FILE_FORMAT = (FORMAT_NAME = NORTHBRIDGE_PROD.RAW.DAILY_JSON)
+    PATTERN = '.*[.]jsonl'
+    ON_ERROR = SKIP_FILE;
+
+-- Mappings start pending. Approval is a separate, evidenced decision.
+MERGE INTO NORTHBRIDGE_PROD.RAW.SECURITY_MAPPINGS m
+USING (
+    SELECT column1 AS instrument_id, column2 AS provider_ticker
+    FROM VALUES
+        ('AAPL.US', 'AAPL'), ('AMZN.US', 'AMZN'),
+        ('MSFT.US', 'MSFT'), ('KO.US', 'KO'),
+        ('GOOGL.US', 'GOOGL'), ('META.US', 'META'),
+        ('NVDA.US', 'NVDA'), ('V.US', 'V'),
+        ('MA.US', 'MA'), ('COST.US', 'COST'),
+        ('HD.US', 'HD'), ('MCD.US', 'MCD'),
+        ('JPM.US', 'JPM'), ('BAC.US', 'BAC'),
+        ('XOM.US', 'XOM'), ('JNJ.US', 'JNJ'),
+        ('PG.US', 'PG'), ('WMT.US', 'WMT'),
+        ('PEP.US', 'PEP'), ('UNH.US', 'UNH')
+) c
+ON m.instrument_id = c.instrument_id AND m.valid_from = '2026-10-16'::date
+WHEN NOT MATCHED THEN INSERT
+    (instrument_id, provider_ticker, valid_from, status, note)
+    VALUES (c.instrument_id, c.provider_ticker, '2026-10-16'::date,
+            'PENDING', 'Review security identity before dividend use');
