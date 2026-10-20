@@ -103,10 +103,8 @@ The suspended readiness graph must be explicitly run for a DEV close. Inspect
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
-Pull requests run Python tests and an offline dbt parse. The
-[CI workflow](.github/workflows/ci.yml) also defines a pre-merge Snowflake
-TEST build for reviewed internal pull requests; its `ci-pr` environment and
-required branch check still need GitHub setup. After a push to `main`, CI
+Pull requests run Python tests and an offline dbt parse without Snowflake
+credentials. After a push to `main`, the [CI workflow](.github/workflows/ci.yml)
 builds against the named
 [Snowflake TEST fixture](config/ci_test_fixture.json). A separate
 [TEST delivery rehearsal](docs/test-rehearsal.md) loaded a dated first day

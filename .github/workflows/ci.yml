@@ -42,8 +42,9 @@ jobs:
           done
 
   integration:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: checks
-    environment: ${{ github.event_name == 'pull_request' && 'ci-pr' || 'ci' }}
+    environment: ci
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:
@@ -56,15 +57,6 @@ jobs:
       NORTHBRIDGE_DBT_KEY_PATH: /tmp/northbridge_ci_test.p8
       TEST_KEY_B64: ${{ secrets.NORTHBRIDGE_CI_TEST_KEY_B64 }}
     steps:
-      - name: Check PR source
-        if: github.event_name == 'pull_request'
-        env:
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-        run: |
-          if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
-            echo 'Snowflake integration needs an internal branch. Forked PRs run credential-free checks only.' >&2
-            exit 1
-          fi
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

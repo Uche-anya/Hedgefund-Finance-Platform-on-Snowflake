@@ -14,31 +14,23 @@ a daily close was delivered or validated.
 
 Pull requests run Python tests and parse the dbt project for DEV, TEST and
 PROD. Parsing catches configuration errors but does not query Snowflake.
-Once `ci-pr` is configured, the integration job builds the pull request's
-merge commit against the fixed TEST case. Its separate GitHub environment
-should require a reviewer to inspect the proposed code before releasing the
-TEST credential. Forked
-pull requests fail this integration job; they need to be brought onto a
-reviewed branch in this repository before merging. The TEST role has no DEV
-or PROD access. All TEST builds share `DBT_TEST`, so the workflow serializes
-them.
+Pull request code does not receive a Snowflake key. The `ci-pr` environment
+was left without credentials because it has no review protection.
 
-After a merge to `main`, the same integration job runs again through the
-existing `ci` environment. Both builds use the October 16 fixture and run
-the models and data tests in Snowflake. `ci` remains limited to `main`. The
+After a merge to `main`, the integration job uses the existing `ci`
+environment to build against the October 16 TEST fixture. It runs the models
+and data tests in Snowflake, then gates the automatic DEV release. The TEST
+role has no DEV or PROD access. All TEST builds share `DBT_TEST`, so the
+workflow serializes them. The
 fixed case does not prove every future delivery will work. Its date, opening
 date and scenario are kept together in the fixture file; they do not choose
 PROD's daily date.
 
-Before enabling the PR job, create the GitHub `ci-pr` environment. Add a
-required reviewer and prevent self-review. Give it the
-`NORTHBRIDGE_CI_TEST_KEY_B64` secret for the TEST-only service user. Review
-changes to workflows, dependency files, dbt macros and SQL before approving
-that environment: the approved PR code runs with TEST access. Do not place
-DEV or PROD credentials in `ci-pr`. Restrict `main` with a ruleset requiring
-pull requests, review, and the `checks` and `integration` status checks; require
-branches to be up to date so the tested merge commit matches what will merge.
-These GitHub settings are not provisioned by this repository.
+`main` is not currently protected. A ruleset should require pull requests and
+the `checks` status before merging. The live TEST build cannot be a required
+pre-merge check in this design because it runs only after a push to `main`.
+The TEST result still blocks DEV deployment. No branch ruleset has been
+provisioned by this repository.
 
 The TEST key was generated with `python -m scripts.create_ci_test_key`.
 Its public half was assigned to the Snowflake service user; its private half
@@ -138,8 +130,8 @@ not calculate the next daily NAV.
 
 ## Release work still open
 
-1. Configure the `ci-pr` environment and protect `main` with required checks
-   and review. Neither setting has been verified on GitHub.
+1. Protect `main` with a required pull request and the credential-free
+   `checks` job. This has not been configured on GitHub.
 2. Automate the proved TEST delivery rehearsal in CI or a controlled release
    gate, and test a late input arriving after readiness first says wait.
 3. Configure and rehearse the automatic PROD promotion through the reviewed
