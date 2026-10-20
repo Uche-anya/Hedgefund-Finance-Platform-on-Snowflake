@@ -13,19 +13,24 @@ a daily close was delivered or validated.
 ## What CI does
 
 Pull requests run Python tests and parse the dbt project for DEV, TEST and
-PROD. Parsing catches configuration errors but does not query Snowflake. PR
-code receives no Snowflake credential.
+PROD. Parsing catches configuration errors but does not query Snowflake.
+Pull request code does not receive a Snowflake key. The `ci-pr` environment
+was left without credentials because it has no review protection.
 
-After a merge to `main`, the same workflow runs `dbt build --target test`
-against the October 16 fixture. This executes the models and data
-tests in Snowflake. The GitHub `ci` environment is limited to `main` and
-contains a key for `NORTHBRIDGE_CI_TEST`. That Snowflake user has only the
-`NORTHBRIDGE_DBT_TEST` role. It cannot deploy to DEV or PROD. The fixture is
-static: this check proves the code works for that known case, not for every
-future delivery. The date, opening date and scenario are kept together in the
-fixture file; they do not choose PROD's daily date.
-The real TEST build still runs after merge. A safe pre-merge integration gate
-needs a separate design that does not expose a Snowflake key to PR code.
+After a merge to `main`, the integration job uses the existing `ci`
+environment to build against the October 16 TEST fixture. It runs the models
+and data tests in Snowflake, then gates the automatic DEV release. The TEST
+role has no DEV or PROD access. All TEST builds share `DBT_TEST`, so the
+workflow serializes them. The
+fixed case does not prove every future delivery will work. Its date, opening
+date and scenario are kept together in the fixture file; they do not choose
+PROD's daily date.
+
+`main` is not currently protected. A ruleset should require pull requests and
+the `checks` status before merging. The live TEST build cannot be a required
+pre-merge check in this design because it runs only after a push to `main`.
+The TEST result still blocks DEV deployment. No branch ruleset has been
+provisioned by this repository.
 
 The TEST key was generated with `python -m scripts.create_ci_test_key`.
 Its public half was assigned to the Snowflake service user; its private half
@@ -62,16 +67,13 @@ python -m scripts.deploy_dbt_project --target test
 It checks the Snowflake role and required RAW tables before uploading. The
 native runner also requires `--target`.
 
-To release to DEV, open the successful **Pull request checks** run for the
-current `main` commit and copy its run ID. Start **Release dbt to DEV** from
-GitHub Actions with that ID. The release workflow checks that the run was a
-successful `main` push, that its TEST integration job passed, and that the
-commit is still the tip of `main`. It checks out that exact commit, saves the
-dbt source under `DBT_SOURCE/commits/<SHA>/`, deploys it, and runs `dbt compile`
-inside Snowflake. Compile checks
-that the deployed project can resolve its models without rebuilding the daily
-NAV. After success it writes the commit SHA, CI run ID, saved stage path and time to
-`NORTHBRIDGE_DEV.DBT_DEV.CODE_RELEASES`.
+After a push to `main`, a successful TEST build now starts the DEV release
+job in the same CI run. It checks that the tested commit is still the tip of
+`main`, saves the dbt source under `DBT_SOURCE/commits/<SHA>/`, deploys it,
+and compiles it in Snowflake. Compile resolves the deployed models without
+rebuilding a daily NAV. The job records the commit SHA, CI run ID and stage
+path in `NORTHBRIDGE_DEV.DBT_DEV.CODE_RELEASES`. The separate **Release dbt to
+DEV** workflow remains available for a manual recovery or rehearsal.
 
 The GitHub `development` environment is restricted to `main`. Its private
 key belongs to `NORTHBRIDGE_RELEASE_DEV`, a Snowflake service user with only
@@ -114,24 +116,26 @@ real Massive data and fictional fund inputs, passed RAW readiness and dbt,
 and recorded one validated close. The next October 19 market day also passed
 with four settlement confirmations and two bank matches. The same CI-passed dbt commit was deployed
 to a versioned PROD stage path and compiled. There is still **no unattended
-PROD daily close**: the producer schedule, task graph, deadline monitor and
+PROD daily close**: the producer schedule and task graph are off, and a
 scheduled next-day rehearsal remains open.
 
-[Release dbt to PROD](../.github/workflows/release-prod.yml) is manual and
-disabled by `SNOWFLAKE_PROD_DEPLOY_ENABLED=false`. When PROD is ready, it will
-accept only the current `main` commit whose CI run passed the TEST integration
-job. The GitHub `production` environment must hold a separate PROD release key
-and a reviewer rule before enabling the workflow. Its compiled dbt context uses
-the PROD opening date and scenario; compiling is a deployment check, not a
-daily NAV calculation. DEV releases continue to use the DEV role and inputs.
+After DEV succeeds, the same CI run can promote that commit to PROD. This job
+is still disabled by `SNOWFLAKE_PROD_DEPLOY_ENABLED=false`. Before enabling it,
+the GitHub `production` environment needs a separate PROD release key and a
+reviewer rule. The job rechecks that the commit is still the tip of `main`,
+then deploys, compiles and records it. The standalone [Release dbt to
+PROD](../.github/workflows/release-prod.yml) workflow remains a manual
+recovery route. The fixed compile context is only a deployment check; it does
+not calculate the next daily NAV.
 
 ## Release work still open
 
-1. Protect `main` with required checks and review; it is not protected today.
+1. Protect `main` with a required pull request and the credential-free
+   `checks` job. This has not been configured on GitHub.
 2. Automate the proved TEST delivery rehearsal in CI or a controlled release
    gate, and test a late input arriving after readiness first says wait.
-3. Move the locally rehearsed PROD dbt release through the reviewed GitHub
-   `production` environment, using its separate release credential.
+3. Configure and rehearse the automatic PROD promotion through the reviewed
+   GitHub `production` environment, using its separate release credential.
 4. Rehearse a scheduled next-day close, a late or missing input and rollback
    in PROD. For rollback,
    redeploy the prior reviewed commit; preserve RAW delivery history and assess
@@ -141,12 +145,19 @@ The GitHub `production` environment exists but has no PROD deployment
 credential or approval rule. The RAW objects alone do not make this an
 operating production pipeline.
 
-The proposed [PROD daily delivery workflow](../.github/workflows/prod-daily.yml)
+The proposed [PROD daily workflow](../.github/workflows/prod-daily.yml)
 combines market, dividend and simulated bank deliveries in one job. It waits
-for both Snowpipe event files before preparing bank cash. Its switch,
+for both Snowpipe event files before preparing bank cash. The job checks out
+the last successful `production` deployment, so a new commit on `main` does
+not change the running producer before the matching dbt code is deployed.
+At 13:00 UTC on Tuesday through Saturday, the same workflow checks for
+exactly one validated close for the preceding US market day. A missing close
+fails that GitHub run. US market holidays are skipped by the reviewed
+calendar; the calendar must be extended before 2027. The switch,
 `NORTHBRIDGE_PROD_DAILY_ENABLED`, is off; the `production-data` environment
 still needs its own loader key and Massive key. The proposed
 [task graph](../snowflake/prod/05_tasks.sql) and its
 [task-owner grants](../snowflake/prod/04_task_access.sql) are not applied.
 Keep the graph suspended until a scheduled next-day delivery, missing-input
-case and deadline check are rehearsed.
+case and deadline check are rehearsed. GitHub may start scheduled workflows
+late; the deadline check reports timeliness but does not repair a missed close.
