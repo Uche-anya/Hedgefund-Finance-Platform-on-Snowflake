@@ -85,9 +85,20 @@ checking copy history and confirming no RAW rows loaded. It is not part of the
 
 ## Run and verify
 
-For a reviewed DEV market date, use `workflow_dispatch` on
-`daily-producer.yml`, `daily-dividends.yml` and `daily-bank.yml`. A manual
-dispatch defaults to preparation only; choose `submit=true` to load it.
+For a reviewed DEV market date, run the producers from the project terminal
+with `NORTHBRIDGE_ENV=dev` and the DEV credentials configured. For example:
+
+```powershell
+python -m pipeline.produce_day 2026-10-16
+python -m pipeline.produce_dividends 2026-10-16
+python -m pipeline.produce_bank 2026-10-16
+```
+
+These prepare local files. Add `--submit` to each command to deliver them to
+Snowflake. The bank command needs the earlier trade and settlement inputs.
+Run `python -m pipeline.check_dividend_deadline --business-date 2026-10-16`
+and `python -m pipeline.check_close_deadline --business-date 2026-10-16` to
+check a delivery and validated close manually.
 The suspended readiness graph must be explicitly run for a DEV close. Inspect
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
