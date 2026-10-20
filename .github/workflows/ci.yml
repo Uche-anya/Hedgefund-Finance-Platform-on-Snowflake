@@ -108,7 +108,7 @@ jobs:
       SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_DEV
       SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_DEV
-      SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_release_dev.p8
+      SNOWFLAKE_PRIVATE_KEY_FILE: /tmp/northbridge_release_dev.p8
       RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_DEV_KEY_B64 }}
     steps:
       - name: Check the commit to release
@@ -166,7 +166,7 @@ jobs:
       SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_PROD
       SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_PROD
-      SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_release_prod.p8
+      SNOWFLAKE_PRIVATE_KEY_FILE: /tmp/northbridge_release_prod.p8
       RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_PROD_KEY_B64 }}
       DBT_BUSINESS_DATE: '2026-10-16'
       DBT_OPENING_DATE: '2026-10-15'
