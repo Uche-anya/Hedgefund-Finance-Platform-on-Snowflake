@@ -17,12 +17,15 @@ PROD. Parsing catches configuration errors but does not query Snowflake. PR
 code receives no Snowflake credential.
 
 After a merge to `main`, the same workflow runs `dbt build --target test`
-against the isolated October 16 fixture. This executes the models and data
+against the October 16 fixture. This executes the models and data
 tests in Snowflake. The GitHub `ci` environment is limited to `main` and
 contains a key for `NORTHBRIDGE_CI_TEST`. That Snowflake user has only the
 `NORTHBRIDGE_DBT_TEST` role. It cannot deploy to DEV or PROD. The fixture is
 static: this check proves the code works for that known case, not for every
-future delivery.
+future delivery. The date, opening date and scenario are kept together in the
+fixture file; they do not choose PROD's daily date.
+The real TEST build still runs after merge. A safe pre-merge integration gate
+needs a separate design that does not expose a Snowflake key to PR code.
 
 The TEST key was generated with `python -m scripts.create_ci_test_key`.
 Its public half was assigned to the Snowflake service user; its private half

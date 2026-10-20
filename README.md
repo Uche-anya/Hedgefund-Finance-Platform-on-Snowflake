@@ -104,8 +104,8 @@ The suspended readiness graph must be explicitly run for a DEV close. Inspect
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
 Pull requests run Python tests and an offline dbt parse. After a push to
-`main`, [CI](.github/workflows/ci.yml) also builds and tests dbt against an
-isolated Snowflake TEST fixture. A separate
+`main`, [CI](.github/workflows/ci.yml) builds against the named
+[Snowflake TEST fixture](config/ci_test_fixture.json). A separate
 [TEST delivery rehearsal](docs/test-rehearsal.md) loaded a dated first day
 through Snowpipe, dbt and bank reconciliation; it has no schedule. The [environment guide](docs/ci-cd.md)
 records the DEV, TEST and PROD boundaries and what remains before PROD can

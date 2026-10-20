@@ -53,9 +53,6 @@ jobs:
       NORTHBRIDGE_DBT_USER: NORTHBRIDGE_CI_TEST
       NORTHBRIDGE_DBT_KEY_PATH: /tmp/northbridge_ci_test.p8
       TEST_KEY_B64: ${{ secrets.NORTHBRIDGE_CI_TEST_KEY_B64 }}
-      DBT_BUSINESS_DATE: '2026-10-16'
-      DBT_OPENING_DATE: '2026-10-07'
-      DBT_SCENARIO_ID: sim-close-20261008
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,6 +62,8 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: python -m pip install -r requirements.txt -r requirements-dbt.txt
+      - name: Select the TEST case
+        run: jq -r 'to_entries[] | "\(.key)=\(.value)"' config/ci_test_fixture.json >> "$GITHUB_ENV"
       - name: Write TEST key
         run: |
           python - <<'PY'

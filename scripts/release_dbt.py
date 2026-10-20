@@ -2,7 +2,9 @@
 
 import argparse
 from datetime import date
+import json
 import os
+from pathlib import Path
 import re
 
 from pipeline.environment import get_environment
@@ -18,9 +20,11 @@ def check_role(cursor, env):
 
 
 def compile_project(cursor, env):
-    business_date = os.environ.get("DBT_BUSINESS_DATE", "2026-10-16")
-    opening_date = os.environ.get("DBT_OPENING_DATE", "2026-10-07")
-    scenario = os.environ.get("DBT_SCENARIO_ID", "sim-close-20261008")
+    fixture = json.loads((Path(__file__).resolve().parents[1] /
+                          "config" / "ci_test_fixture.json").read_text(encoding="utf-8"))
+    business_date = os.environ.get("DBT_BUSINESS_DATE", fixture["DBT_BUSINESS_DATE"])
+    opening_date = os.environ.get("DBT_OPENING_DATE", fixture["DBT_OPENING_DATE"])
+    scenario = os.environ.get("DBT_SCENARIO_ID", fixture["DBT_SCENARIO_ID"])
     if env.name == "prod" and not all(os.environ.get(name) for name in (
             "DBT_BUSINESS_DATE", "DBT_OPENING_DATE", "DBT_SCENARIO_ID")):
         raise ValueError("PROD release needs its own close date, opening date and scenario")
