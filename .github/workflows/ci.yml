@@ -42,11 +42,13 @@ jobs:
           done
 
   integration:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: checks
-    environment: ci
+    environment: ${{ github.event_name == 'pull_request' && 'ci-pr' || 'ci' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    concurrency:
+      group: dbt-test-integration
+      cancel-in-progress: false
     permissions:
       contents: read
     env:
@@ -54,6 +56,15 @@ jobs:
       NORTHBRIDGE_DBT_KEY_PATH: /tmp/northbridge_ci_test.p8
       TEST_KEY_B64: ${{ secrets.NORTHBRIDGE_CI_TEST_KEY_B64 }}
     steps:
+      - name: Check PR source
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+            echo 'Snowflake integration needs an internal branch. Forked PRs run credential-free checks only.' >&2
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -80,3 +91,122 @@ jobs:
           PY
       - name: Build against TEST inputs
         run: dbt build --project-dir dbt --profiles-dir dbt --target test --no-partial-parse
+
+  release_dev:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: integration
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: dbt-dev-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_DEV
+      SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_DEV
+      SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_release_dev.p8
+      RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_DEV_KEY_B64 }}
+    steps:
+      - name: Check the commit to release
+        run: |
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')
+          if [ "$current" != "$GITHUB_SHA" ]; then
+            echo 'A newer commit is on main. Release that one instead.' >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Write DEV release key
+        id: key
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          value = os.environ.get('RELEASE_KEY_B64')
+          if not value:
+              raise SystemExit('DEV release key is missing')
+          path = Path(os.environ['SNOWFLAKE_PRIVATE_KEY_FILE'])
+          path.write_bytes(base64.b64decode(value, validate=True))
+          path.chmod(0o600)
+          PY
+      - name: Deploy and verify DEV
+        run: |
+          python -m scripts.deploy_dbt_project --target dev --release-sha "$GITHUB_SHA"
+          python -m scripts.release_dbt record --target dev \
+            --sha "$GITHUB_SHA" --ci-run-id "$GITHUB_RUN_ID"
+      - name: Restore last good DEV release
+        if: failure() && steps.key.outcome == 'success'
+        run: python -m scripts.release_dbt restore --target dev
+
+  release_prod:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SNOWFLAKE_PROD_DEPLOY_ENABLED == 'true'
+    needs: release_dev
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: dbt-prod-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SNOWFLAKE_ACCOUNT: ${{ vars.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: NORTHBRIDGE_RELEASE_PROD
+      SNOWFLAKE_ROLE: NORTHBRIDGE_DBT_PROD
+      SNOWFLAKE_PRIVATE_KEY_FILE: ${{ runner.temp }}/northbridge_release_prod.p8
+      RELEASE_KEY_B64: ${{ secrets.NORTHBRIDGE_RELEASE_PROD_KEY_B64 }}
+      DBT_BUSINESS_DATE: '2026-10-16'
+      DBT_OPENING_DATE: '2026-10-15'
+      DBT_SCENARIO_ID: sim-prod-20261016
+    steps:
+      - name: Check the commit to release
+        run: |
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')
+          if [ "$current" != "$GITHUB_SHA" ]; then
+            echo 'A newer commit is on main. Release that one instead.' >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Write PROD release key
+        id: key
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          value = os.environ.get('RELEASE_KEY_B64')
+          if not value:
+              raise SystemExit('PROD release key is missing')
+          path = Path(os.environ['SNOWFLAKE_PRIVATE_KEY_FILE'])
+          path.write_bytes(base64.b64decode(value, validate=True))
+          path.chmod(0o600)
+          PY
+      - name: Deploy and verify PROD
+        run: |
+          python -m scripts.deploy_dbt_project --target prod --release-sha "$GITHUB_SHA"
+          python -m scripts.release_dbt record --target prod \
+            --sha "$GITHUB_SHA" --ci-run-id "$GITHUB_RUN_ID"
+      - name: Restore last good PROD release
+        if: failure() && steps.key.outcome == 'success'
+        run: python -m scripts.release_dbt restore --target prod

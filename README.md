@@ -103,8 +103,11 @@ The suspended readiness graph must be explicitly run for a DEV close. Inspect
 `RAW.DAILY_DELIVERIES`, Snowflake task history and `RAW.DAILY_CLOSE_RUNS` for
 the outcome. `VALIDATED` means checks passed, not that NAV was published.
 
-Pull requests run Python tests and an offline dbt parse. After a push to
-`main`, [CI](.github/workflows/ci.yml) builds against the named
+Pull requests run Python tests and an offline dbt parse. The
+[CI workflow](.github/workflows/ci.yml) also defines a pre-merge Snowflake
+TEST build for reviewed internal pull requests; its `ci-pr` environment and
+required branch check still need GitHub setup. After a push to `main`, CI
+builds against the named
 [Snowflake TEST fixture](config/ci_test_fixture.json). A separate
 [TEST delivery rehearsal](docs/test-rehearsal.md) loaded a dated first day
 through Snowpipe, dbt and bank reconciliation; it has no schedule. The [environment guide](docs/ci-cd.md)
@@ -115,11 +118,12 @@ run. To run the Python checks locally:
 .\.venv\dbt\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
 ```
 
-To release a reviewed dbt change to DEV, run
-[Release dbt to DEV](.github/workflows/release-dev.yml) with the successful
-CI run ID for the current `main` commit. It compiles the deployed project and
-records the commit in `DBT_DEV.CODE_RELEASES`. Each release keeps its source
-under the commit SHA so the last good version can be restored. To run a reviewed Snowflake SQL file from
+After a successful TEST build on `main`, CI deploys the same commit to DEV,
+compiles it and records it in `DBT_DEV.CODE_RELEASES`. PROD promotion stays
+disabled until its separate credential and review gate are configured. Each
+release keeps its source under the commit SHA for restoration. The manual
+[DEV release workflow](.github/workflows/release-dev.yml) remains for recovery.
+To run a reviewed Snowflake SQL file from
 the project terminal, use `python scripts/snow_admin.py --file <path>` with the
 admin connection configured. These are deployment commands, not daily jobs.
 
