@@ -1,5 +1,4 @@
--- DEV is for manual validation. The unattended close will move to PROD.
--- Keep the task definitions so we can still inspect or manually exercise them.
+
 USE ROLE NORTHBRIDGE_DBT_DEV;
 
 ALTER TASK IF EXISTS NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_READY SUSPEND;
