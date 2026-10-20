@@ -12,4 +12,5 @@ GRANT EXECUTE TASK ON ACCOUNT TO ROLE NORTHBRIDGE_TASK_PROD;
 
 USE ROLE SECURITYADMIN;
 SET task_deployer = CURRENT_USER();
+-- Needed only while installing the task graph in 05_tasks.sql.
 GRANT ROLE NORTHBRIDGE_TASK_PROD TO USER IDENTIFIER($task_deployer);

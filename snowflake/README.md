@@ -14,3 +14,11 @@ PROD order: `01_raw.sql`, `02_access.sql`, deploy and build dbt,
 The first three phases were applied for the manual October 16 close. Task
 access and tasks are prepared but have not been applied. The scheduled root
 must stay suspended until the next-day producer and deadline checks pass.
+`04_task_access.sql` temporarily gives the installing user the task role;
+`05_tasks.sql` removes that personal grant after installing the graph. If
+installation fails before the last statement, run the three cleanup statements
+at the end of `05_tasks.sql` separately. The dedicated task role keeps task
+ownership and its narrow PROD grants.
+The graph in `05_tasks.sql` still contains the October rehearsal's scenario and
+opening date. Do not install or schedule it as a general daily PROD graph until
+those inputs are derived from the daily close contract and exercised in TEST.

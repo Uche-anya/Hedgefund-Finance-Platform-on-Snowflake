@@ -296,3 +296,10 @@ AS
     CALL NORTHBRIDGE_PROD.DBT_PROD.RECORD_DAILY_CLOSE(
         TO_DATE(SUBSTR(SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY'), 7)),
         'sim-prod-20261016', '2026-10-15'::date);
+
+-- The task role keeps ownership. The person who installed it does not need
+-- the role after deployment. If deployment stops early, run these three
+-- statements separately to remove the personal grant.
+USE ROLE SECURITYADMIN;
+SET task_deployer = CURRENT_USER();
+REVOKE ROLE NORTHBRIDGE_TASK_PROD FROM USER IDENTIFIER($task_deployer);
