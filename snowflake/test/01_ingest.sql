@@ -1,4 +1,4 @@
--- Add a TEST delivery path. Existing TEST RAW rows remain in place for CI.
+
 USE ROLE SYSADMIN;
 
 CREATE FILE FORMAT IF NOT EXISTS NORTHBRIDGE_TEST.RAW.DAILY_JSON
