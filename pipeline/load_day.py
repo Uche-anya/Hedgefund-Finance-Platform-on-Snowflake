@@ -92,7 +92,6 @@ def request_snowpipe(item):
         pipe=PIPE[item["source"]],
         private_key=pem,
     )
-    # The pipe starts at @DAILY_LANDING/oms/ or /settlements/.
     file_in_pipe = item["path"].split("/", 1)[1]
     result = manager.ingest_files([StagedFile(file_in_pipe, item["file"].stat().st_size)])
     if result.get("responseCode") != "SUCCESS":

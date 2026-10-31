@@ -1,5 +1,3 @@
--- Replace only the failed record procedure; leave the task graph as deployed.
--- SYSADMIN owns this replacement, so grant the task owner's role access.
 USE ROLE SYSADMIN;
 
 CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.RECORD_DAILY_CLOSE(

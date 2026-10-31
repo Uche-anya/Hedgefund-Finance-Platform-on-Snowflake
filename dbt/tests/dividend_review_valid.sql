@@ -1,4 +1,3 @@
--- An approval needs a reviewed security, plausible terms and a named reviewer.
 select event_id, terms_hash
 from {{ ref('stg_dividends') }}
 where review_status = 'APPROVED'

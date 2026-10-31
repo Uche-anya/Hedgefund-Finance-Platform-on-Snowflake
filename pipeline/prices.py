@@ -41,7 +41,6 @@ def prepare(price_csv, data_dir, business_date):
                     raise ValueError("Nonpositive close for {}".format(ticker))
             except InvalidOperation:
                 raise ValueError("Invalid close for {}".format(ticker))
-            # Request IDs belong to the saved provider response, not to a price.
             rows[ticker] = {
                 "valuation_date": day,
                 "universe_ticker": ticker,

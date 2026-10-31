@@ -1,4 +1,3 @@
--- A retry may repeat a report; a changed trade needs a new execution version.
 with reports as (
     select
         r.payload:scenario_id::varchar as scenario_id,

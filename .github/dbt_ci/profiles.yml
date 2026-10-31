@@ -1,5 +1,3 @@
-# dbt parse needs a profile, but does not open a database connection.
-# These values must never be used for dbt run or dbt build.
 northbridge:
   target: dev
   outputs:

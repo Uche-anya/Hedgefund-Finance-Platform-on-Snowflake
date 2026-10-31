@@ -1,5 +1,3 @@
--- One-time setup. Run after 01_daily_raw.sql and 02_ingest_access.sql.
--- This is a public key. The matching private key stays in .secrets/.
 USE ROLE SECURITYADMIN;
 
 CREATE USER NORTHBRIDGE_LOADER

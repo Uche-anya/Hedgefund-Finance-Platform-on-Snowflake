@@ -1,4 +1,3 @@
--- Each price date closes the position built from all executions through that day.
 {{ config(materialized='incremental', incremental_strategy='merge',
           unique_key=['valuation_date', 'scenario_id', 'account_id', 'instrument_id']) }}
 

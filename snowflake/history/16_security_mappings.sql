@@ -1,4 +1,3 @@
--- Candidate fund securities. Approval needs current identity evidence.
 USE ROLE SYSADMIN;
 
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.SECURITY_MAPPINGS (

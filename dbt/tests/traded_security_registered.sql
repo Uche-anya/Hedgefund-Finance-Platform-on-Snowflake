@@ -1,4 +1,3 @@
--- An OMS instrument needs a dated candidate even if it is not approved yet.
 select distinct e.instrument_id, e.market_ticker
 from {{ ref('stg_executions') }} e
 where not exists (

@@ -1,5 +1,3 @@
--- The date list matches config/us_equity_calendar_2026.json.
--- Review and deploy the next year's calendar before 2027.
 USE ROLE SYSADMIN;
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.US_EQUITY_MARKET_CLOSED (
     closed_date DATE NOT NULL
@@ -57,8 +55,6 @@ BEGIN
 END;
 $$;
 
--- A separate Snowflake clock checks the deadline. Later readiness runs can
--- still recover the close; they do not erase a failed deadline task run.
 ALTER TASK IF EXISTS NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_DEADLINE SUSPEND;
 CREATE OR ALTER TASK NORTHBRIDGE_DEV.DBT_DEV.DAILY_CLOSE_DEADLINE
     WAREHOUSE = COMPUTE_WH
@@ -68,4 +64,3 @@ AS
     CALL NORTHBRIDGE_DEV.DBT_DEV.CHECK_CLOSE_DEADLINE(
         DATEADD(day, -1,
             CONVERT_TIMEZONE('America/New_York', CURRENT_TIMESTAMP())::date));
--- DEV stays suspended. Only PROD should have an unattended deadline task.

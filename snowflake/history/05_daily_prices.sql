@@ -1,5 +1,3 @@
--- Market data is independent of the simulated fund scenario.
--- Keep the provider row intact; parsing and security mapping come later.
 USE ROLE SYSADMIN;
 
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_PRICE_EVENTS (

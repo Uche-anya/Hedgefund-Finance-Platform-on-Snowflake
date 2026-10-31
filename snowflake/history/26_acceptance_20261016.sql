@@ -1,5 +1,3 @@
--- Read-only evidence for the completed October 16 close.
--- The bank delivery on this date predates the transaction-ledger format.
 USE ROLE SYSADMIN;
 
 SELECT source_name, scenario_id, status, expected_rows, delivery_id
