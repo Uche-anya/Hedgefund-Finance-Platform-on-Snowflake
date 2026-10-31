@@ -1,5 +1,3 @@
--- Check the October 12 delivery and its calculated close.
--- A VALIDATED run means the calculation passed; it is not NAV publication.
 USE ROLE NORTHBRIDGE_DBT_DEV;
 
 SELECT source_name, business_date, status, expected_rows, delivery_id

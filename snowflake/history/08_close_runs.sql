@@ -1,4 +1,3 @@
--- One row per attempt. A validated run is a checked calculation, not publication.
 USE ROLE SYSADMIN;
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS (
     run_id VARCHAR,

@@ -1,4 +1,3 @@
--- The bank opening is the starting cash; the fund-admin subscription is a check.
 with bank as (
     select r.payload, r.source_file
     from {{ source('raw', 'daily_opening_events') }} r

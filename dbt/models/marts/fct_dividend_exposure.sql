@@ -1,5 +1,3 @@
--- Book one entitlement per account on the ex-date. Later runs keep the row;
--- a provider correction needs a reviewed restatement, not a silent rewrite.
 {{ config(materialized='incremental', incremental_strategy='merge',
           unique_key=['event_id', 'scenario_id', 'account_id']) }}
 

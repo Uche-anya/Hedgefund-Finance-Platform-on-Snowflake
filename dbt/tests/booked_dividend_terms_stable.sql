@@ -1,4 +1,3 @@
--- A provider correction after booking needs a reviewed restatement.
 select e.event_id, e.account_id, e.terms_hash
 from {{ ref('fct_dividend_exposure') }} e
 left join {{ ref('dividend_review_queue') }} q

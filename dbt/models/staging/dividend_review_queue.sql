@@ -1,5 +1,3 @@
--- Only fund-universe events reach this queue. A ticker is a candidate,
--- not proof of the security's identity.
 with matches as (
     select e.event_id,
         count(*) as mapping_count,

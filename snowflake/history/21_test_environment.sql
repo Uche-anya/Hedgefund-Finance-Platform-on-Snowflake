@@ -1,5 +1,3 @@
--- A fixed copy of current daily inputs for dbt integration tests.
--- No producer, pipe or scheduled task writes to this database.
 USE ROLE SYSADMIN;
 CREATE DATABASE IF NOT EXISTS NORTHBRIDGE_TEST
     COMMENT = 'Isolated daily-pipeline test inputs and dbt models';

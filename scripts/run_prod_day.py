@@ -33,7 +33,6 @@ def run(business_date, scenario, opening_date, data_dir):
     produce_day.run(business_date, scenario, data_dir, True)
     produce_dividends.run(business_date, data_dir, True)
 
-    # The two event files are asynchronous. Bank cash uses the executed trades.
     for attempt in range(40):
         with snowflake_connection() as connection:
             with connection.cursor() as cursor:

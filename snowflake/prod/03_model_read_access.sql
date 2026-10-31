@@ -1,5 +1,3 @@
--- The next producer reads yesterday's checked outputs to make today's
--- fictional activity. It cannot alter dbt tables.
 USE ROLE SECURITYADMIN;
 
 GRANT SELECT ON TABLE NORTHBRIDGE_PROD.DBT_PROD.FCT_NAV_DAILY

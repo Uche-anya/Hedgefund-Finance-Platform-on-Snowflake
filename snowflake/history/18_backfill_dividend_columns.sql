@@ -1,5 +1,3 @@
--- Existing development closes predate dividend booking. Fill only rows that
--- have no booked event on or before their valuation date.
 UPDATE NORTHBRIDGE_DEV.DBT_DEV.FCT_CASH_DAILY c
 SET modeled_dividend_cash_to_date = 0
 WHERE modeled_dividend_cash_to_date IS NULL

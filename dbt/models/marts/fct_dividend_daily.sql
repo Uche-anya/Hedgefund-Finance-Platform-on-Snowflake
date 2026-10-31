@@ -1,5 +1,3 @@
--- A pay date moves the booked amount from receivable/liability to modeled cash.
--- Without a broker statement, this is a scenario calculation, not a receipt.
 {{ config(materialized='incremental', incremental_strategy='merge',
           unique_key=['valuation_date', 'scenario_id', 'account_id']) }}
 

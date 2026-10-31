@@ -1,4 +1,3 @@
--- First NAV: USD equity positions plus modeled cash and unsettled trade cash.
 {{ config(materialized='incremental', incremental_strategy='merge',
           unique_key=['valuation_date', 'scenario_id', 'account_id'],
           on_schema_change='append_new_columns') }}

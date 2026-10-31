@@ -1,5 +1,3 @@
--- Take the latest delivered version of each event. A review of an old
--- version cannot approve a provider correction with changed terms.
 with latest_delivery as (
     select delivery_id, business_date
     from {{ source('raw', 'daily_deliveries') }}

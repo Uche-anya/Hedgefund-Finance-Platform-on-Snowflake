@@ -1,4 +1,3 @@
--- dbt reads RAW and creates models only in DBT_DEV.
 USE ROLE SECURITYADMIN;
 CREATE ROLE IF NOT EXISTS NORTHBRIDGE_DBT_DEV;
 

@@ -1,4 +1,3 @@
--- Run after 01_daily_raw.sql. The service user is created in 03_loader_user.sql.
 USE ROLE SECURITYADMIN;
 
 CREATE ROLE IF NOT EXISTS NORTHBRIDGE_INGEST_DEV;

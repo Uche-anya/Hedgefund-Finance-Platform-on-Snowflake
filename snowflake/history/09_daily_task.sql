@@ -1,4 +1,3 @@
--- Suspend DAILY_CLOSE_READY before changing this task graph; resume it last.
 USE ROLE NORTHBRIDGE_DBT_DEV;
 
 CREATE OR REPLACE PROCEDURE NORTHBRIDGE_DEV.DBT_DEV.CHECK_DIVIDEND_INPUT(
@@ -294,5 +293,3 @@ AS
     CALL NORTHBRIDGE_DEV.DBT_DEV.RECORD_DAILY_CLOSE(
         TO_DATE(SUBSTR(SYSTEM$GET_PREDECESSOR_RETURN_VALUE('DAILY_CLOSE_READY'), 7)),
         'sim-close-20261008', '2026-10-07'::date);
-
--- The root ran during the October DEV pilot. It was suspended on October 18.

@@ -1,4 +1,3 @@
--- Provider dividend snapshots are evidence, not fund cash receipts.
 USE ROLE SYSADMIN;
 
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_DIVIDEND_EVENTS (

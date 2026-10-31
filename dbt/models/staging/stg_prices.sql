@@ -1,4 +1,3 @@
--- A market delivery is shared by all simulated accounts.
 select
     try_to_date(r.payload:valuation_date::varchar) as valuation_date,
     r.payload:universe_ticker::varchar as market_ticker,
