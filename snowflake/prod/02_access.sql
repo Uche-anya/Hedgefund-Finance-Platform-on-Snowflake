@@ -1,4 +1,3 @@
--- Separate loader and dbt roles. Neither inherits the DEV or TEST role.
 USE ROLE SECURITYADMIN;
 
 CREATE ROLE IF NOT EXISTS NORTHBRIDGE_INGEST_PROD;

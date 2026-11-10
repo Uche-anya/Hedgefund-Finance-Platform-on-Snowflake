@@ -1,4 +1,3 @@
--- Approval without these fields would be a ticker-only guess.
 select instrument_id, provider_ticker
 from {{ source('raw', 'security_mappings') }}
 where status = 'APPROVED'

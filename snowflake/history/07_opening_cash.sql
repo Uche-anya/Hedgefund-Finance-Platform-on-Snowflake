@@ -1,4 +1,3 @@
--- Keep opening bank and fund-admin records in RAW with their source paths.
 USE ROLE SYSADMIN;
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DAILY_OPENING_EVENTS (
     payload VARIANT,

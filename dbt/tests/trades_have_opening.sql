@@ -1,4 +1,3 @@
--- Every account we value needs a starting cash balance.
 select distinct e.account_id
 from {{ ref('stg_executions') }} e
 left join {{ ref('stg_opening_cash') }} o

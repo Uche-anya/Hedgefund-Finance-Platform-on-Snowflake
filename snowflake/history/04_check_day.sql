@@ -1,9 +1,6 @@
--- Change the two values below to inspect one saved day.
 SET close_date = '2024-09-24';
 SET close_scenario = 'sim-equity-2024-2026-v2';
 
--- SUBMITTED means Snowpipe accepted the file, not that rows are in RAW yet.
--- The actual count is the evidence of loading. Empty deliveries need no rows.
 WITH expected_sources AS (
     SELECT 'oms' AS source_name, $close_scenario AS source_scenario
     UNION ALL
@@ -48,7 +45,6 @@ LEFT JOIN loaded l ON l.source_name = e.source_name
 GROUP BY e.source_name, d.delivery_id, d.status, d.expected_rows
 ORDER BY e.source_name;
 
--- More than one row means the same delivery ID was registered twice.
 SELECT delivery_id, COUNT(*) AS registry_rows
 FROM NORTHBRIDGE_DEV.RAW.DAILY_DELIVERIES
 GROUP BY delivery_id

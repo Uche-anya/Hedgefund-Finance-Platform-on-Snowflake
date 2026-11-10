@@ -18,8 +18,6 @@ OMS = ENV.raw("DAILY_OMS_EVENTS")
 DELIVERIES = ENV.raw("DAILY_DELIVERIES")
 SETTLEMENTS = ENV.raw("DAILY_SETTLEMENT_EVENTS")
 
-# The first four names are the pilot. From October 14, each account trades
-# four names per session from a wider, fixed equity list.
 EXPANDED_FROM = date(2026, 10, 14)
 ORDER_BOOK = {
     "SIM-ACCOUNT-01": (

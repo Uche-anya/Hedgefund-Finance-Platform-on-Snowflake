@@ -1,4 +1,3 @@
--- A review applies to one version of a provider event. Keep prior decisions.
 USE ROLE SYSADMIN;
 
 CREATE TABLE IF NOT EXISTS NORTHBRIDGE_DEV.RAW.DIVIDEND_REVIEWS (

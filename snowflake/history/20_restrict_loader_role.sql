@@ -1,4 +1,3 @@
--- The producer reads validated closes; only the dbt task writes them.
 USE ROLE SECURITYADMIN;
 
 REVOKE INSERT, UPDATE ON TABLE NORTHBRIDGE_DEV.RAW.DAILY_CLOSE_RUNS

@@ -1,6 +1,3 @@
--- Reviewed against Massive ticker details dated 2026-10-14.
--- MSFT was also checked on its first simulator date, 2026-10-08.
--- The OMS instrument IDs here are our own ticker-based simulator convention.
 USE ROLE SYSADMIN;
 
 UPDATE NORTHBRIDGE_DEV.RAW.SECURITY_MAPPINGS m

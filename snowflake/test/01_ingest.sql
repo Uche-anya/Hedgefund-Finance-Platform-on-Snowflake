@@ -30,7 +30,6 @@ CREATE PIPE IF NOT EXISTS NORTHBRIDGE_TEST.RAW.DAILY_SETTLEMENT_PIPE
     PATTERN = '.*[.]jsonl'
     ON_ERROR = SKIP_FILE;
 
--- Four TEST candidates cover the rehearsal day; later DEV mappings begin Oct 8.
 MERGE INTO NORTHBRIDGE_TEST.RAW.SECURITY_MAPPINGS m
 USING (
     SELECT column1 AS instrument_id, column2 AS provider_ticker

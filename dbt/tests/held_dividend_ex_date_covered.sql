@@ -1,4 +1,3 @@
--- A held stock's ex-date cannot pass the close without a reviewed booking.
 with prior_close as (
     select max(p.valuation_date) as valuation_date
     from {{ ref('fct_position_daily') }} p
